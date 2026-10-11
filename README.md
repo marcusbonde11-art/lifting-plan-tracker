@@ -8,7 +8,7 @@ progressive overload and two Make.com automations:
 ```
  program/library.yaml ──► scripts/build_sheet.py ──► Make "Lifting – Setup" ──► Google Sheet
                                                                                  │
- Saturday 6 pm ET  Make "Weekly Tab Generator"  ── copies _Template → "Wk NN · Mon d" ┤
+ Saturday 7 am ET  Make "Weekly Tab Generator"  ── copies _Template → "Wk NN · Mon d" ┤
  every 30 min      Make "Workout Complete Email" ── Outbox → Gmail → stamps "Email sent" ┘
 ```
 
@@ -88,7 +88,7 @@ Week 1 (and the first week of a new block) has no suggested weight. Log what you
 
 | Scenario | Schedule | Does |
 |---|---|---|
-| Lifting – Weekly Tab Generator (Sat 6pm) | Saturdays 18:00 ET | If `Config!B16` is TRUE: duplicates `_Template` as `Wk NN · Mon d`, stamps the week number and previous tab, protects the tab except the yellow cells, freezes exercises and suggested weights as values, then advances Config. |
+| Lifting – Weekly Tab Generator (Sat 7am) | Saturdays 07:00 ET | If `Config!B16` is TRUE: duplicates `_Template` as `Wk NN · Mon d`, stamps the week number and previous tab, protects the tab except the yellow cells, freezes exercises and suggested weights as values, then advances Config. |
 | Lifting – Workout Complete Email (every 30 min) | every 30 min, 06:00–23:00 ET | Reads `Outbox` (days ticked complete with no "Email sent" stamp), emails each summary to the address in `Config!B8`, then stamps "Email sent". The email also includes the previous day's nutrition totals and the surplus or deficit vs maintenance. The recipient gets only the email, with no access to the sheet. |
 | Lifting – Setup (one-shot) | (deleted after use) | Created the spreadsheet from `build/*.json`; blueprint kept in `make/`. |
 
@@ -116,7 +116,7 @@ The blueprints are in `make/` and are regenerated with `python scripts/build_mak
 ## Live setup
 
 - Spreadsheet: [Lifting Plan Tracker](https://docs.google.com/spreadsheets/d/1fTHQ7q9cnYqHdw5xueuDbO5nDeAp3Fhhd8VpKPH3LeU/edit). Week 1 = `Wk 01 · Oct 11` (Sun Oct 11 – Sat Oct 17).
-- Make: generator scenario 6590981 (Saturdays 18:00 ET), email scenario 6592194 (every 30 min, 06:00–23:00 ET).
+- Make: generator scenario 6590981 (Saturdays 07:00 ET), email scenario 6592194 (every 30 min, 06:00–23:00 ET).
 - Verified end to end on 2026-10-11:
   - A test day sent the summary email (KB 13 min, body weight, 3 of 5 targets hit, ⬆ weights).
   - "Email sent" was stamped.

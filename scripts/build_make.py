@@ -5,7 +5,7 @@ Usage:  python scripts/build_make.py <spreadsheetId>
 
 Blueprints:
   make/setup.blueprint.json           one-shot: creates the spreadsheet
-  make/weekly_generator.blueprint.json Saturday 6 pm ET: builds next week's tab
+  make/weekly_generator.blueprint.json Saturday 7 am ET: builds next week's tab
   make/daily_email.blueprint.json     every 30 min, 6 am–11 pm ET: emails completed days
 """
 import json
@@ -83,7 +83,7 @@ def generator(sid):
     snapshot = '{"requests":[' + freeze("prescription", "suggested") + "," + freeze("key", "name") + "]}"
     only_when_due = {"name": "Only when next week is due (Saturday) and not built yet",
                      "conditions": [[{"a": flag, "o": "text:equal", "b": "true"}]]}
-    return blueprint("Lifting – Weekly Tab Generator (Sat 6pm)", [
+    return blueprint("Lifting – Weekly Tab Generator (Sat 7am)", [
         sheets_call(1, f"spreadsheets/{sid}/values/Config!B2:B16", qs=[("majorDimension", "COLUMNS"),
                                                                       ("valueRenderOption", "UNFORMATTED_VALUE")],
                     note="Config: current/next week, next tab name, generate flag"),
