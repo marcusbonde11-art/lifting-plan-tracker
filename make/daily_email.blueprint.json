@@ -9,7 +9,7 @@
     "__IMTCONN__": 11391947
    },
    "mapper": {
-    "url": "spreadsheets/TESTID/values/Outbox!A1:B13",
+    "url": "spreadsheets/1fTHQ7q9cnYqHdw5xueuDbO5nDeAp3Fhhd8VpKPH3LeU/values/Outbox!A1:B13",
     "method": "GET",
     "qs": [
      {
@@ -83,7 +83,7 @@
     "__IMTCONN__": 11391947
    },
    "mapper": {
-    "url": "spreadsheets/TESTID/values/{{encodeURL(get(split(2.value; \"§§\"); 2))}}",
+    "url": "spreadsheets/1fTHQ7q9cnYqHdw5xueuDbO5nDeAp3Fhhd8VpKPH3LeU/values/{{encodeURL(get(split(2.value; \"§§\"); 2))}}",
     "method": "PUT",
     "qs": [
      {
