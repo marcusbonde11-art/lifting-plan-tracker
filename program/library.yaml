@@ -8,9 +8,17 @@
 #   - Every exercise has exactly one how-to video URL.
 
 kettlebell:
-  title: "Roxanne Russell – 30 Min Full Body Strength, No Repeat Kettlebell Workout"
-  url: "https://www.youtube.com/watch?v=Ijn7_x994u8"  # Workout With Roxanne: 30 MIN FULL BODY STRENGTH // NO REPEAT Kettlebell Workout (29:59)
-  note: "Do the first 10–15 minutes as your warm-up."
+  # One ~15-minute, beginner-friendly, male-led kettlebell warm-up per day type.
+  # Push video runs on Push 1 + Push 2, pull on Pull 1 + Pull 2, legs on Legs 1 + Legs 2.
+  push:
+    title: "Samuel Jordan – Chest & Triceps with One Kettlebell (15 min)"
+    url: "https://www.youtube.com/watch?v=SM7h3wih74M"   # 16:53
+  pull:
+    title: "DanielPT Fitness – 15 min Pull Upper Body Kettlebell (slow-paced)"
+    url: "https://www.youtube.com/watch?v=Ic1Yoq7fe-o"   # 15:40
+  legs:
+    title: "DanielPT Fitness – 15 min Kettlebell Leg & Glute (all standing)"
+    url: "https://www.youtube.com/watch?v=NZjsyOYaS1g"   # 15:26
 
 types:
   Heavy:        {sets_note: "last set AMRAP", rest: "3–5 min"}

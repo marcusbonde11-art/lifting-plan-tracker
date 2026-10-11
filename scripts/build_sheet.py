@@ -147,7 +147,7 @@ CONFIG = [  # (label, value, note, format) – rows 2..16
     ("Block length (weeks)", 6, "Exercises rotate to the next block after this many weeks.", None),
     ("Blocks in rotation", 3, "A → B → C → A …", None),
     ("Daily summary email to", WIFE_EMAIL, "Emailed each time a day is ticked complete.", None),
-    ("Kettlebell video", KB["url"], KB["title"], None),
+    ("(unused – see rows 17–19)", "", "Kettlebell videos are now per day type below.", None),
     ("Athlete name", ATHLETE, "Used in the email subject.", None),
     ("Template sheet ID", TEMPLATE_SHEET_ID, "Hidden tab the generator copies.", None),
     ("Next week #", "=B3+1", "", None),
@@ -156,6 +156,9 @@ CONFIG = [  # (label, value, note, format) – rows 2..16
     ("Next week starts", "=B2+(B12-1)*7", "", DATE),
     ("Generate next week now?", "=OR(B3=0,B15-TODAY()<=1)",
      "TRUE from Saturday on (or before week 1). The generator does nothing while FALSE.", None),
+    ("Kettlebell warm-up – Push days", KB["push"]["url"], KB["push"]["title"], None),   # row 17
+    ("Kettlebell warm-up – Pull days", KB["pull"]["url"], KB["pull"]["title"], None),   # row 18
+    ("Kettlebell warm-up – Leg days", KB["legs"]["url"], KB["legs"]["title"], None),    # row 19
 ]
 
 
@@ -195,6 +198,11 @@ START = [
     ("• Typing a different weight than suggested makes YOUR number the new baseline.", False),
     ("• Ticking Workout complete emails a summary of the day (within about 30 minutes).", False),
     ("• Exercises rotate every 6 weeks (Block A → B → C). Saturday is rest.", False),
+    ("• Body Log: add your weekly InBody scan (date, weight, body fat %, skeletal muscle mass). "
+     "Daily calorie + protein targets update from your latest lean body mass.", False),
+    ("• Nutrition: one row per weighed food (date, food, grams, calories, protein). "
+     "Yesterday's totals and surplus/deficit go into the next workout email.", False),
+    ("• Monthly Check-in: waist measurement + a link to that month's progress photos.", False),
 ]
 
 
@@ -253,6 +261,23 @@ def exercise_cells(r, h, order):
     return [c[n] for n in COLS]
 
 
+# Config rows 17/18/19 hold the push/pull/legs warm-up video (B) and its title (C).
+KB_FORMULA = ('=LET(t,LEFT({u},2),r,IF(t="PU",18,IF(LEFT(t,1)="P",17,19)),'
+              'HYPERLINK(INDEX(Config!$B:$B,r),"🔔 Kettlebell warm-up, 15 min: "&INDEX(Config!$C:$C,r)))')
+
+
+def nutrition_html(date):
+    """Email paragraph: yesterday's logged calories/protein vs maintenance and targets."""
+    rng = lambda c: f"Nutrition!${c}$5:${c}"
+    return (f'LET(d,{date}-1,n,COUNTIF({rng("A")},d),k,SUMIF({rng("A")},d,{rng("D")}),'
+            f'p,SUMIF({rng("A")},d,{rng("E")}),m,\'Body Log\'!$B$10,tk,\'Body Log\'!$B$12,tp,\'Body Log\'!$B$13,'
+            '"<p>🍽️ Nutrition yesterday ("&TEXT(d,"ddd mmm d")&"): "&IF(n=0,"no food logged",'
+            '"<b>"&TEXT(k,"#,##0")&" kcal</b> · <b>"&ROUND(p)&" g protein</b>"'
+            '&IF(ISNUMBER(m)," — "&IF(k>=m,"<b>surplus</b> of +"&TEXT(k-m,"#,##0"),'
+            '"<b>deficit</b> of "&TEXT(m-k,"#,##0"))&" kcal vs maintenance ("&TEXT(m,"#,##0")&")","")'
+            '&IF(ISNUMBER(tk),"<br>Daily targets: "&TEXT(tk,"#,##0")&" kcal · "&tp&" g protein",""))&"</p>")')
+
+
 def header_cells(h, day_key, label):
     k = lambda n: f"{col(n)}{h}"
     first, last = h + 1, h + 5
@@ -261,8 +286,7 @@ def header_cells(h, day_key, label):
     c.update({n: cell() for n in COLS[idx("sent") + 1:]})
     c["label"] = cell(f'=IF($S$1="",UPPER({k("order")}),UPPER(TEXT({date},"ddd mmm d"))&" · "&UPPER({k("order")}))',
                       bold=True, bg=DAY_BG)
-    c["exercise"] = cell('=HYPERLINK(Config!$B$9,"🔔 Kettlebell warm-up, 10–15 min: Roxanne Russell '
-                         '30-min no-repeat full body (do the first 10–15 min)")', bg=DAY_BG, italic=True, wrap=True)
+    c["exercise"] = cell(KB_FORMULA.format(u=k("daykey")), bg=DAY_BG, italic=True, wrap=True)
     # Body weight: label in C, yellow input in D (both empty on day-header rows otherwise)
     c["prescription"] = cell("⚖️ Body weight (lb)", bg=DAY_BG, align="RIGHT", italic=True)
     c["rest"] = cell(bg=EDIT_BG, fmt=NUM, align="CENTER", validation={
@@ -294,6 +318,7 @@ def header_cells(h, day_key, label):
         f'<p style=\'margin:0 0 14px;color:#6b7280\'>Week "&$P$1&" · Block "&$R$1&" (week "&$T$1&" of "&Config!$B$6&")</p>'
         f'<p>🔔 Kettlebell warm-up: "&{kb}&"</p>'
         f'<p>⚖️ Body weight: "&{bw_html}&"</p>'
+        f'"&{nutrition_html(date)}&"'
         f'<p><b>"&{hits}&" of "&{total}&"</b> exercises hit their rep targets.</p>'
         f'<table cellpadding=\'6\' style=\'border-collapse:collapse;font-size:14px\'>'
         f'<tr style=\'background:#f3f4f6\'><th align=\'left\'>Exercise</th><th>Sets × reps</th><th>Weight</th>'
@@ -367,8 +392,10 @@ def create_body():
 
 
 def batch_body():
+    import build_logs  # imported late: build_logs reuses helpers from this module
     return {"requests": start_requests() + config_requests() + library_requests()
-            + outbox_requests() + template_requests()}
+            + outbox_requests() + template_requests()
+            + build_logs.add_sheets(5) + build_logs.log_requests()}
 
 
 def main():

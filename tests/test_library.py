@@ -57,7 +57,9 @@ def test_equipment_rules_and_no_deadlifts():
 def test_every_exercise_has_a_youtube_video():
     for _, _, _, (name, *_rest, url) in exercises():
         assert re.fullmatch(r"https://www\.youtube\.com/watch\?v=[\w-]{11}", url), name
-    assert re.fullmatch(r"https://www\.youtube\.com/watch\?v=[\w-]{11}", LIB["kettlebell"]["url"])
+    assert set(LIB["kettlebell"]) == {"push", "pull", "legs"}
+    for kb in LIB["kettlebell"].values():
+        assert re.fullmatch(r"https://www\.youtube\.com/watch\?v=[\w-]{11}", kb["url"])
 
 
 def test_exercises_rotate_between_blocks():
