@@ -309,7 +309,7 @@ HEADS = {"label": "Day / #", "exercise": "Exercise (tap for video)", "prescripti
          "rest": "Rest", "suggested": "Suggested lb", "lifted": "Weight lifted", "amrap": "AMRAP reps",
          "hit": "Target hit?", "next": "Next week lb", "kbstart": "KB start", "kbstop": "KB stop",
          "kbmin": "KB min", "complete": "Workout complete", "sent": "Email sent"}
-WIDTHS = [150, 280, 120, 70, 85, 85, 70, 85, 85, 80, 80, 60, 85, 115]
+WIDTHS = [130, 230, 120, 70, 85, 85, 70, 85, 85, 80, 80, 60, 85, 115]
 
 
 def template_requests():
@@ -363,7 +363,7 @@ def create_body():
                              color="#6B7280"),
                        props(OUTBOX_SHEET_ID, "Outbox", 3, hidden=True, cols=2, rows=30),
                        props(TEMPLATE_SHEET_ID, "_Template", 4, hidden=True, cols=len(COLS), rows=SAT_ROW,
-                             frozen=3, frozen_cols=2, color="#2563EB")]}
+                             frozen=3, frozen_cols=0, color="#2563EB")]}
 
 
 def batch_body():
