@@ -1,0 +1,145 @@
+{
+ "name": "Lifting – Weekly Tab Generator (Sat 6pm)",
+ "flow": [
+  {
+   "id": 1,
+   "module": "google-sheets:makeAPICall",
+   "version": 2,
+   "parameters": {
+    "__IMTCONN__": 11391947
+   },
+   "mapper": {
+    "url": "spreadsheets/TESTID/values/Config!B2:B16",
+    "method": "GET",
+    "qs": [
+     {
+      "key": "majorDimension",
+      "value": "COLUMNS"
+     },
+     {
+      "key": "valueRenderOption",
+      "value": "UNFORMATTED_VALUE"
+     }
+    ]
+   },
+   "metadata": {
+    "designer": {
+     "x": 0,
+     "y": 0
+    },
+    "note": "Config: current/next week, next tab name, generate flag"
+   }
+  },
+  {
+   "id": 2,
+   "module": "google-sheets:makeAPICall",
+   "version": 2,
+   "parameters": {
+    "__IMTCONN__": 11391947
+   },
+   "mapper": {
+    "url": "spreadsheets/TESTID:batchUpdate",
+    "method": "POST",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": "{\"requests\":[{\"duplicateSheet\":{\"sourceSheetId\":9,\"insertSheetIndex\":0,\"newSheetId\":{{1.body.values[1][13]}},\"newSheetName\":\"{{1.body.values[1][12]}}\"}},{\"updateSheetProperties\":{\"properties\":{\"sheetId\":{{1.body.values[1][13]}},\"hidden\":false},\"fields\":\"hidden\"}},{\"updateCells\":{\"start\":{\"sheetId\":{{1.body.values[1][13]}},\"rowIndex\":0,\"columnIndex\":14},\"rows\":[{\"values\":[{\"userEnteredValue\":{\"stringValue\":\"{{1.body.values[1][12]}}\"}},{\"userEnteredValue\":{\"numberValue\":{{1.body.values[1][11]}}}},{\"userEnteredValue\":{\"stringValue\":\"{{1.body.values[1][3]}}\"}}]}],\"fields\":\"userEnteredValue\"}},{\"addProtectedRange\":{\"protectedRange\":{\"range\":{\"sheetId\":{{1.body.values[1][13]}}},\"description\":\"Only the yellow cells are yours to edit\",\"warningOnly\":true,\"unprotectedRanges\":[{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":4,\"endRowIndex\":9,\"startColumnIndex\":5,\"endColumnIndex\":6},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":4,\"endRowIndex\":5,\"startColumnIndex\":6,\"endColumnIndex\":7},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":3,\"endRowIndex\":4,\"startColumnIndex\":9,\"endColumnIndex\":11},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":3,\"endRowIndex\":4,\"startColumnIndex\":12,\"endColumnIndex\":13},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":10,\"endRowIndex\":15,\"startColumnIndex\":5,\"endColumnIndex\":6},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":10,\"endRowIndex\":11,\"startColumnIndex\":6,\"endColumnIndex\":7},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":9,\"endRowIndex\":10,\"startColumnIndex\":9,\"endColumnIndex\":11},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":9,\"endRowIndex\":10,\"startColumnIndex\":12,\"endColumnIndex\":13},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":16,\"endRowIndex\":21,\"startColumnIndex\":5,\"endColumnIndex\":6},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":16,\"endRowIndex\":17,\"startColumnIndex\":6,\"endColumnIndex\":7},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":15,\"endRowIndex\":16,\"startColumnIndex\":9,\"endColumnIndex\":11},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":15,\"endRowIndex\":16,\"startColumnIndex\":12,\"endColumnIndex\":13},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":22,\"endRowIndex\":27,\"startColumnIndex\":5,\"endColumnIndex\":6},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":22,\"endRowIndex\":23,\"startColumnIndex\":6,\"endColumnIndex\":7},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":21,\"endRowIndex\":22,\"startColumnIndex\":9,\"endColumnIndex\":11},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":21,\"endRowIndex\":22,\"startColumnIndex\":12,\"endColumnIndex\":13},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":28,\"endRowIndex\":33,\"startColumnIndex\":5,\"endColumnIndex\":6},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":28,\"endRowIndex\":29,\"startColumnIndex\":6,\"endColumnIndex\":7},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":27,\"endRowIndex\":28,\"startColumnIndex\":9,\"endColumnIndex\":11},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":27,\"endRowIndex\":28,\"startColumnIndex\":12,\"endColumnIndex\":13},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":34,\"endRowIndex\":39,\"startColumnIndex\":5,\"endColumnIndex\":6},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":34,\"endRowIndex\":35,\"startColumnIndex\":6,\"endColumnIndex\":7},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":33,\"endRowIndex\":34,\"startColumnIndex\":9,\"endColumnIndex\":11},{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":33,\"endRowIndex\":34,\"startColumnIndex\":12,\"endColumnIndex\":13}]}}}]}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 300,
+     "y": 0
+    },
+    "note": "Copy _Template → new week tab, stamp week #/previous tab, lock all but yellow cells"
+   },
+   "filter": {
+    "name": "Only when next week is due (Saturday) and not built yet",
+    "conditions": [
+     [
+      {
+       "a": "{{1.body.values[1][15]}}",
+       "o": "text:equal",
+       "b": "true"
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "id": 3,
+   "module": "google-sheets:makeAPICall",
+   "version": 2,
+   "parameters": {
+    "__IMTCONN__": 11391947
+   },
+   "mapper": {
+    "url": "spreadsheets/TESTID:batchUpdate",
+    "method": "POST",
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": "{\"requests\":[{\"copyPaste\":{\"source\":{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":3,\"endRowIndex\":40,\"startColumnIndex\":2,\"endColumnIndex\":5},\"destination\":{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":3,\"endRowIndex\":40,\"startColumnIndex\":2,\"endColumnIndex\":5},\"pasteType\":\"PASTE_VALUES\"}},{\"copyPaste\":{\"source\":{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":3,\"endRowIndex\":40,\"startColumnIndex\":14,\"endColumnIndex\":23},\"destination\":{\"sheetId\":{{1.body.values[1][13]}},\"startRowIndex\":3,\"endRowIndex\":40,\"startColumnIndex\":14,\"endColumnIndex\":23},\"pasteType\":\"PASTE_VALUES\"}}]}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 0
+    },
+    "note": "Freeze the week's exercises and suggested weights as values"
+   }
+  },
+  {
+   "id": 4,
+   "module": "google-sheets:makeAPICall",
+   "version": 2,
+   "parameters": {
+    "__IMTCONN__": 11391947
+   },
+   "mapper": {
+    "url": "spreadsheets/TESTID/values/Config!B3:B5",
+    "method": "PUT",
+    "qs": [
+     {
+      "key": "valueInputOption",
+      "value": "USER_ENTERED"
+     }
+    ],
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": "{\"values\":[[{{1.body.values[1][11]}}],[\"{{1.body.values[1][12]}}\"],[\"{{1.body.values[1][3]}}\"]]}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 0
+    },
+    "note": "Advance Config: current week, current tab, previous tab"
+   }
+  }
+ ],
+ "metadata": {
+  "version": 1,
+  "instant": false,
+  "scenario": {
+   "roundtrips": 1,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "autoCommitTriggerLast": true,
+   "sequential": true,
+   "confidential": false,
+   "dataloss": false,
+   "dlq": false,
+   "freshVariables": false
+  }
+ }
+}

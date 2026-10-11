@@ -1,0 +1,142 @@
+# Single source of truth for the program. scripts/build_sheet.py turns this into
+# the Library tab of the Google Sheet. Edit here, rebuild, re-run Setup.
+#
+# Rules this file must satisfy (checked by tests/test_library.py):
+#   - 6 training days per block, 1 Heavy + 4 accessories each
+#   - Upper body: dumbbell, machine, cable, bodyweight or Smith machine only
+#   - Legs: barbell allowed. No deadlift variants anywhere.
+#   - Every exercise has exactly one how-to video URL.
+
+kettlebell:
+  title: "Roxanne Russell – 30 Min Full Body Kettlebell Workout (No Repeat)"
+  url: ""  # filled by scripts/find_videos (verified)
+  note: "Do the first 10–15 minutes as your warm-up."
+
+types:
+  Heavy:        {sets_note: "last set AMRAP", rest: "3–5 min"}
+  Compound-acc: {rest: "2–3 min"}
+  Isolation:    {rest: "60–90 s"}
+
+days:
+  # key, weekday (0 = Sun), label
+  - [P1, 0, "Push 1"]
+  - [PU1, 1, "Pull 1"]
+  - [L1, 2, "Legs 1"]
+  - [P2, 3, "Push 2"]
+  - [PU2, 4, "Pull 2"]
+  - [L2, 5, "Legs 2"]
+
+# Each exercise: [name, type, sets, rep_low, rep_high, increment_lb, equipment, video_url]
+# Region is implied by the day (P/PU = Upper, L = Legs).
+blocks:
+  A:
+    P1:
+      - ["Smith Machine Flat Bench Press", Heavy, 5, 3, 5, 5, smith, ""]
+      - ["Seated Dumbbell Shoulder Press", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Low-to-High Cable Fly", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Cable Y-Raise", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Overhead Rope Triceps Extension", Isolation, 3, 8, 12, 2.5, cable, ""]
+    PU1:
+      - ["Hammer Strength Iso-Lateral Row", Heavy, 5, 3, 5, 5, machine, ""]
+      - ["Neutral-Grip Lat Pulldown", Compound-acc, 3, 8, 12, 5, cable, ""]
+      - ["Chest-Supported Incline Dumbbell Row", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Reverse Pec Deck", Isolation, 3, 8, 12, 2.5, machine, ""]
+      - ["Incline Dumbbell Curl", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+    L1:
+      - ["Barbell Back Squat", Heavy, 5, 3, 5, 10, barbell, ""]
+      - ["Leg Press (High & Wide Feet)", Compound-acc, 3, 8, 12, 10, machine, ""]
+      - ["Seated Leg Curl", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Leg Extension", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Standing Calf Raise Machine", Isolation, 4, 8, 12, 5, machine, ""]
+    P2:
+      - ["Smith Machine Incline Bench Press", Heavy, 4, 3, 5, 5, smith, ""]
+      - ["Converging Machine Chest Press", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Machine Lateral Raise", Isolation, 3, 8, 12, 2.5, machine, ""]
+      - ["Machine Dip", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Cable Triceps Pushdown", Isolation, 3, 8, 12, 2.5, cable, ""]
+    PU2:
+      - ["Smith Machine Bent-Over Row", Heavy, 4, 3, 5, 5, smith, ""]
+      - ["Kneeling Single-Arm Cable Pulldown", Compound-acc, 3, 8, 12, 2.5, cable, ""]
+      - ["Dumbbell Seal Row", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Cable Face Pull", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Machine Preacher Curl", Isolation, 3, 8, 12, 2.5, machine, ""]
+    L2:
+      - ["Barbell Front Squat", Heavy, 4, 3, 5, 10, barbell, ""]
+      - ["Dumbbell Bulgarian Split Squat", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Lying Leg Curl", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["45-Degree Back Extension", Compound-acc, 3, 8, 12, 5, bodyweight, ""]
+      - ["Seated Calf Raise", Isolation, 4, 8, 12, 5, machine, ""]
+  B:
+    P1:
+      - ["Smith Machine Decline Bench Press", Heavy, 5, 3, 5, 5, smith, ""]
+      - ["Incline Dumbbell Press (30 Degrees)", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Pec Deck Fly", Isolation, 3, 8, 12, 2.5, machine, ""]
+      - ["Single-Arm Cable Lateral Raise", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Dumbbell Skull Crusher", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+    PU1:
+      - ["Weighted Pull-Up (Dumbbell Between Feet)", Heavy, 5, 3, 5, 5, dumbbell, ""]
+      - ["Machine High Row", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Single-Arm Dumbbell Row", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Cable Rear Delt Fly", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Bayesian Cable Curl", Isolation, 3, 8, 12, 2.5, cable, ""]
+    L1:
+      - ["Barbell Pause Squat", Heavy, 5, 3, 5, 10, barbell, ""]
+      - ["Hack Squat Machine", Compound-acc, 3, 8, 12, 10, machine, ""]
+      - ["Standing Single-Leg Curl Machine", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Hip Adduction Machine", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Leg Press Calf Raise", Isolation, 4, 8, 12, 5, machine, ""]
+    P2:
+      - ["Seated Machine Shoulder Press", Heavy, 4, 3, 5, 5, machine, ""]
+      - ["Low-Incline Dumbbell Press", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["High-to-Low Cable Crossover", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Dumbbell Lateral Raise", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+      - ["Cross-Body Cable Triceps Extension", Isolation, 3, 8, 12, 2.5, cable, ""]
+    PU2:
+      - ["Chest-Supported T-Bar Row Machine", Heavy, 4, 3, 5, 5, machine, ""]
+      - ["Wide-Grip Lat Pulldown", Compound-acc, 3, 8, 12, 5, cable, ""]
+      - ["Straight-Arm Cable Pulldown", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Dumbbell Shrug", Isolation, 3, 8, 12, 5, dumbbell, ""]
+      - ["Dumbbell Hammer Curl", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+    L2:
+      - ["Barbell Hip Thrust", Heavy, 4, 3, 5, 10, barbell, ""]
+      - ["Belt Squat Machine", Compound-acc, 3, 8, 12, 10, machine, ""]
+      - ["Cable Pull-Through", Isolation, 3, 8, 12, 5, cable, ""]
+      - ["Single-Leg Leg Extension", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Single-Leg Dumbbell Calf Raise", Isolation, 4, 8, 12, 5, dumbbell, ""]
+  C:
+    P1:
+      - ["Smith Machine Close-Grip Bench Press", Heavy, 5, 3, 5, 5, smith, ""]
+      - ["Hammer Strength Incline Chest Press", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Seated Cable Fly", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Lean-Away Dumbbell Lateral Raise", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+      - ["Seated Dumbbell Overhead Triceps Extension", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+    PU1:
+      - ["Heavy Single-Arm Dumbbell Row", Heavy, 5, 3, 5, 5, dumbbell, ""]
+      - ["Close-Grip Seated Cable Row", Compound-acc, 3, 8, 12, 5, cable, ""]
+      - ["Assisted Neutral-Grip Pull-Up Machine", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Prone Incline Dumbbell Rear Delt Raise", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+      - ["Dumbbell Spider Curl", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+    L1:
+      - ["Barbell Box Squat", Heavy, 5, 3, 5, 10, barbell, ""]
+      - ["Single-Leg Leg Press", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Glute-Ham Raise", Compound-acc, 3, 8, 12, 5, bodyweight, ""]
+      - ["Paused Leg Extension", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Smith Machine Calf Raise", Isolation, 4, 8, 12, 10, smith, ""]
+    P2:
+      - ["Flat Dumbbell Bench Press", Heavy, 4, 3, 5, 5, dumbbell, ""]
+      - ["Smith Machine Seated Overhead Press", Compound-acc, 3, 8, 12, 5, smith, ""]
+      - ["Incline Dumbbell Fly", Isolation, 3, 8, 12, 2.5, dumbbell, ""]
+      - ["Behind-the-Back Cable Lateral Raise", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Smith Machine JM Press", Compound-acc, 3, 8, 12, 5, smith, ""]
+    PU2:
+      - ["Hammer Strength Iso-Lateral Low Row", Heavy, 4, 3, 5, 5, machine, ""]
+      - ["Iso-Lateral Front Lat Pulldown", Compound-acc, 3, 8, 12, 5, machine, ""]
+      - ["Dumbbell Kelso Shrug", Isolation, 3, 8, 12, 5, dumbbell, ""]
+      - ["Reverse Cable Crossover", Isolation, 3, 8, 12, 2.5, cable, ""]
+      - ["Rope Cable Hammer Curl", Isolation, 3, 8, 12, 2.5, cable, ""]
+    L2:
+      - ["Hack Squat (Heavy)", Heavy, 4, 3, 5, 10, machine, ""]
+      - ["Dumbbell High Step-Up", Compound-acc, 3, 8, 12, 5, dumbbell, ""]
+      - ["Kneeling Leg Curl Machine", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Glute Kickback Machine", Isolation, 3, 8, 12, 5, machine, ""]
+      - ["Seated Calf Raise", Isolation, 4, 8, 12, 5, machine, ""]

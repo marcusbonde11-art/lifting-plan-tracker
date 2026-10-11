@@ -1,0 +1,126 @@
+{
+ "name": "Lifting – Workout Complete Email (every 30 min)",
+ "flow": [
+  {
+   "id": 1,
+   "module": "google-sheets:makeAPICall",
+   "version": 2,
+   "parameters": {
+    "__IMTCONN__": 11391947
+   },
+   "mapper": {
+    "url": "spreadsheets/TESTID/values/Outbox!A1:B13",
+    "method": "GET",
+    "qs": [
+     {
+      "key": "majorDimension",
+      "value": "COLUMNS"
+     }
+    ]
+   },
+   "metadata": {
+    "designer": {
+     "x": 0,
+     "y": 0
+    },
+    "note": "Pending summaries (days ticked complete, not yet emailed) + recipient"
+   }
+  },
+  {
+   "id": 2,
+   "module": "builtin:BasicFeeder",
+   "version": 1,
+   "parameters": {},
+   "mapper": {
+    "array": "{{1.body.values[1]}}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 300,
+     "y": 0
+    }
+   }
+  },
+  {
+   "id": 3,
+   "module": "google-email:sendAnEmail",
+   "version": 4,
+   "parameters": {
+    "__IMTCONN__": 11391672
+   },
+   "filter": {
+    "name": "Only real pending emails",
+    "conditions": [
+     [
+      {
+       "a": "{{2.value}}",
+       "o": "text:contain",
+       "b": "§§"
+      }
+     ]
+    ]
+   },
+   "mapper": {
+    "to": [
+     "{{1.body.values[2][1]}}"
+    ],
+    "subject": "{{get(split(2.value; \"§§\"); 1)}}",
+    "bodyType": "rawHtml",
+    "content": "{{get(split(2.value; \"§§\"); 3)}}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 600,
+     "y": 0
+    }
+   }
+  },
+  {
+   "id": 4,
+   "module": "google-sheets:makeAPICall",
+   "version": 2,
+   "parameters": {
+    "__IMTCONN__": 11391947
+   },
+   "mapper": {
+    "url": "spreadsheets/TESTID/values/{{encodeURL(get(split(2.value; \"§§\"); 2))}}",
+    "method": "PUT",
+    "qs": [
+     {
+      "key": "valueInputOption",
+      "value": "USER_ENTERED"
+     }
+    ],
+    "headers": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     }
+    ],
+    "body": "{\"values\":[[\"Sent {{formatDate(now; \"ddd h:mm A\"; \"America/New_York\")}}\"]]}"
+   },
+   "metadata": {
+    "designer": {
+     "x": 900,
+     "y": 0
+    },
+    "note": "Stamp 'Email sent' so the day is never emailed twice"
+   }
+  }
+ ],
+ "metadata": {
+  "version": 1,
+  "instant": false,
+  "scenario": {
+   "roundtrips": 1,
+   "maxErrors": 3,
+   "autoCommit": true,
+   "autoCommitTriggerLast": true,
+   "sequential": true,
+   "confidential": false,
+   "dataloss": false,
+   "dlq": false,
+   "freshVariables": false
+  }
+ }
+}

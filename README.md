@@ -1,5 +1,89 @@
 # lifting-plan-tracker
 
-Google Sheets Push/Pull/Legs lifting tracker with progressive overload, plus Make.com automation (weekly tab generation, daily completion email).
+A Google Sheets lifting tracker for a twice-weekly Push / Pull / Legs split, with automatic
+progressive overload and two Make.com automations:
+- **Saturday:** builds next week's tab.
+- **When a day is ticked complete:** emails a summary of that workout.
 
-Status: planning — implementation pending approval.
+```
+ program/library.yaml ──► scripts/build_sheet.py ──► Make "Lifting – Setup" ──► Google Sheet
+                                                                                 │
+ Saturday 6 pm ET  Make "Weekly Tab Generator"  ── copies _Template → "Wk NN · Mon d" ┤
+ every 30 min      Make "Workout Complete Email" ── Outbox → Gmail → stamps "Email sent" ┘
+```
+
+## The week
+
+| Sun | Mon | Tue | Wed | Thu | Fri | Sat |
+|---|---|---|---|---|---|---|
+| Push 1 | Pull 1 | Legs 1 | Push 2 | Pull 2 | Legs 2 | Rest |
+
+Every session:
+1. **Kettlebell warm-up, 10–15 min.** The first 10–15 minutes of Roxanne Russell's 30-min
+   no-repeat full-body kettlebell workout (linked on each day's 🔔 row).
+2. **Main lift.** One heavy compound, 4–5 sets × 3–5 reps. The last set is AMRAP. Rest 3–5 min.
+3. **Four accessories.** 3–4 sets × 8–12 reps. Rest 2–3 min for compound or machine moves,
+   60–90 s for isolations.
+
+**Equipment rules:**
+- Upper body: dumbbells, machines and cables only. The Smith machine is the one barbell exception.
+- Legs: barbell allowed, including squats.
+- No deadlift variants anywhere.
+
+**Rotation:** exercises stay fixed for 6-week blocks, then rotate (Block A → B → C → A).
+
+**Videos:** every exercise links a short (< 4 min) how-to video.
+
+## What you edit (yellow cells only)
+
+| Cell | Where | Notes |
+|---|---|---|
+| Weight lifted | every exercise row | Leave blank if you used the suggested weight. A different number becomes your new baseline. |
+| AMRAP reps | main-lift row | Reps on the final set. |
+| KB start / KB stop | day header row | Kettlebell warm-up times, e.g. `6:05 am`. Duration is calculated and included in the email. |
+| Workout complete ☐ | day header row | Ticking it queues the summary email. |
+
+Everything else is formula-driven and protected. Because Marcus owns the sheet, Google can't hard-lock
+it for him, so the protection is set to warn before any edit outside the yellow cells.
+
+## Progressive overload
+
+| Situation | Next week |
+|---|---|
+| Main lift: AMRAP set reaches the top of the range (≥ 5 reps) | + increment |
+| Accessory: day ticked complete with a weight logged | + increment |
+| Target missed or day not completed | same weight |
+| You typed a weight different from the suggestion | your weight is the new baseline |
+
+Increments come from the Library tab:
+- Upper body: +5 lb on compound / Smith / machine lifts, +2.5 lb on isolations.
+- Legs: +10 lb on barbell squats, hack squat and leg press; +5 lb on other leg accessories.
+
+Week 1 (and the first week of a new block) has no suggested weight. Log what you lift and it becomes the baseline.
+
+## Make.com scenarios (team "My Team")
+
+| Scenario | Schedule | Does |
+|---|---|---|
+| Lifting – Weekly Tab Generator (Sat 6pm) | Saturdays 18:00 ET | If `Config!B16` is TRUE: duplicates `_Template` as `Wk NN · Mon d`, stamps the week number and previous tab, protects the tab except the yellow cells, freezes exercises and suggested weights as values, then advances Config. |
+| Lifting – Workout Complete Email (every 30 min) | every 30 min, 06:00–23:00 ET | Reads `Outbox` (days ticked complete with no "Email sent" stamp), emails each summary to the address in `Config!B8`, then stamps "Email sent". |
+| Lifting – Setup (one-shot) | on demand | Creates the spreadsheet from `build/*.json`. |
+
+The blueprints are in `make/` and are regenerated with `python scripts/build_make.py <spreadsheetId>`.
+
+## Changing the program
+
+1. Edit `program/library.yaml`.
+2. Run `python -m pytest`. It checks the spec rules: equipment, no deadlifts, set/rep ranges,
+   increments, videos and rotation.
+3. Run `python scripts/build_sheet.py`, then re-paste the `Library` tab. You can also re-run Setup
+   for a fresh workbook.
+
+## Files
+
+- `program/library.yaml`: all three blocks, rest times, increments and video links.
+- `scripts/layout.py`: column and row layout shared by the builders.
+- `scripts/build_sheet.py`: Google Sheets API payloads (`build/create.json`, `build/requests.json`).
+- `scripts/build_make.py`: Make blueprints.
+- `scripts/progression.py`: Python mirror of the sheet's progression formulas (for tests).
+- `tests/`: progression and program-rule tests.
