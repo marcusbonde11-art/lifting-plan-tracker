@@ -1,6 +1,6 @@
 """Shared layout constants for the weekly tab (used by the builder and tests)."""
 
-PROGRAM_START = (2026, 10, 18)  # first Sunday of week 1
+PROGRAM_START = (2026, 10, 11)  # first Sunday of week 1
 TIMEZONE = "America/New_York"
 WIFE_EMAIL = "Maegirl333@gmail.com"
 ATHLETE = "Marcus"

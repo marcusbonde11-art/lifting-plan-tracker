@@ -91,7 +91,7 @@ The blueprints are in `make/` and are regenerated with `python scripts/build_mak
 
 ## Live setup
 
-- Spreadsheet: [Lifting Plan Tracker](https://docs.google.com/spreadsheets/d/1fTHQ7q9cnYqHdw5xueuDbO5nDeAp3Fhhd8VpKPH3LeU/edit). Week 1 = `Wk 01 · Oct 18`.
+- Spreadsheet: [Lifting Plan Tracker](https://docs.google.com/spreadsheets/d/1fTHQ7q9cnYqHdw5xueuDbO5nDeAp3Fhhd8VpKPH3LeU/edit). Week 1 = `Wk 01 · Oct 11` (Sun Oct 11 – Sat Oct 17).
 - Make: generator scenario 6590981 (Saturdays 18:00 ET), email scenario 6592194 (every 30 min, 06:00–23:00 ET).
 - Verified end to end on 2026-10-11:
   - A test day sent the summary email (KB 13 min, body weight, 3 of 5 targets hit, ⬆ weights).
