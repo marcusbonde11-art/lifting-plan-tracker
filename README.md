@@ -41,6 +41,7 @@ Every session:
 | Weight lifted | every exercise row | Leave blank if you used the suggested weight. A different number becomes your new baseline. |
 | AMRAP reps | main-lift row | Reps on the final set. |
 | KB start / KB stop | day header row | Kettlebell warm-up times, e.g. `6:05 am`. Duration is calculated and included in the email. |
+| Body weight (lb) | day header row, column D | Optional. Included in the email with the change since your last weigh-in. |
 | Workout complete ☐ | day header row | Ticking it queues the summary email. |
 
 Everything else is formula-driven and protected. Because Marcus owns the sheet, Google can't hard-lock
@@ -67,7 +68,7 @@ Week 1 (and the first week of a new block) has no suggested weight. Log what you
 |---|---|---|
 | Lifting – Weekly Tab Generator (Sat 6pm) | Saturdays 18:00 ET | If `Config!B16` is TRUE: duplicates `_Template` as `Wk NN · Mon d`, stamps the week number and previous tab, protects the tab except the yellow cells, freezes exercises and suggested weights as values, then advances Config. |
 | Lifting – Workout Complete Email (every 30 min) | every 30 min, 06:00–23:00 ET | Reads `Outbox` (days ticked complete with no "Email sent" stamp), emails each summary to the address in `Config!B8`, then stamps "Email sent". |
-| Lifting – Setup (one-shot) | on demand | Creates the spreadsheet from `build/*.json`. |
+| Lifting – Setup (one-shot) | (deleted after use) | Created the spreadsheet from `build/*.json`; blueprint kept in `make/`. |
 
 The blueprints are in `make/` and are regenerated with `python scripts/build_make.py <spreadsheetId>`.
 
@@ -87,3 +88,13 @@ The blueprints are in `make/` and are regenerated with `python scripts/build_mak
 - `scripts/build_make.py`: Make blueprints.
 - `scripts/progression.py`: Python mirror of the sheet's progression formulas (for tests).
 - `tests/`: progression and program-rule tests.
+
+## Live setup
+
+- Spreadsheet: [Lifting Plan Tracker](https://docs.google.com/spreadsheets/d/1fTHQ7q9cnYqHdw5xueuDbO5nDeAp3Fhhd8VpKPH3LeU/edit). Week 1 = `Wk 01 · Oct 18`.
+- Make: generator scenario 6590981 (Saturdays 18:00 ET), email scenario 6592194 (every 30 min, 06:00–23:00 ET).
+- Verified end to end on 2026-10-11:
+  - A test day sent the summary email (KB 13 min, body weight, 3 of 5 targets hit, ⬆ weights).
+  - "Email sent" was stamped.
+  - A test Week 2 carried forward 185→190, 50→55 and 20→22.5.
+  - Test data was then removed.

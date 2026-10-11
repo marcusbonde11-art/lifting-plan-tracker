@@ -114,7 +114,7 @@ def daily_email(sid):
          "mapper": {"to": ["{{1.body.values[2][1]}}"], "subject": part(1), "bodyType": "rawHtml",
                     "content": part(3)},
          "metadata": {"designer": {"x": 600, "y": 0}}},
-        sheets_call(4, f"spreadsheets/{sid}/values/{{{{encodeURL({part(2)[2:-2]})}}}}", "PUT",
+        sheets_call(4, f"spreadsheets/{sid}/values/{part(2)}", "PUT",
                     qs=[("valueInputOption", "USER_ENTERED")],
                     body='{"values":[["Sent {{formatDate(now; "ddd h:mm A"; "America/New_York")}}"]]}',
                     x=900, note="Stamp 'Email sent' so the day is never emailed twice"),

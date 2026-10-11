@@ -187,7 +187,7 @@ START = [
     ("How this tracker works", True),
     ("• Each week gets its own tab (newest first), built automatically every Saturday evening.", False),
     ("• Only the YELLOW cells are yours: Weight lifted, AMRAP reps (main lift's last set), "
-     "KB start / KB stop (kettlebell warm-up times) and the Workout complete checkbox.", False),
+     "KB start / KB stop (kettlebell warm-up times), Body weight and the Workout complete checkbox.", False),
     ("• Tap an exercise name for its how-to video. The 🔔 row opens the kettlebell warm-up video.", False),
     ("• Main lift: weight goes up next week when the AMRAP set hits 5+ reps.", False),
     ("• Accessories: weight goes up when you tick Workout complete with a weight logged.", False),
@@ -263,10 +263,16 @@ def header_cells(h, day_key, label):
                       bold=True, bg=DAY_BG)
     c["exercise"] = cell('=HYPERLINK(Config!$B$9,"🔔 Kettlebell warm-up, 10–15 min: Roxanne Russell '
                          '30-min no-repeat full body (do the first 10–15 min)")', bg=DAY_BG, italic=True, wrap=True)
+    # Body weight: label in C, yellow input in D (both empty on day-header rows otherwise)
+    c["prescription"] = cell("⚖️ Body weight (lb)", bg=DAY_BG, align="RIGHT", italic=True)
+    c["rest"] = cell(bg=EDIT_BG, fmt=NUM, align="CENTER", validation={
+        "condition": {"type": "NUMBER_BETWEEN", "values": [{"userEnteredValue": "50"}, {"userEnteredValue": "700"}]},
+        "inputMessage": "Your body weight today (lb). Optional – included in the daily email.", "strict": True})
     c["kbstart"] = cell(bg=EDIT_BG, fmt=TIME, align="CENTER")
     c["kbstop"] = cell(bg=EDIT_BG, fmt=TIME, align="CENTER")
     c["kbmin"] = cell(f'=IF(AND(ISNUMBER({k("kbstart")}),ISNUMBER({k("kbstop")})),'
-                      f'ROUND(MOD({k("kbstop")}-{k("kbstart")},1)*1440),"")', bg=DAY_BG, align="CENTER", bold=True)
+                      f'ROUND(MOD({k("kbstop")}-{k("kbstart")},1)*1440),"")', bg=DAY_BG, align="CENTER", bold=True,
+                      fmt={"type": "NUMBER", "pattern": "0"})
     c["complete"] = cell(False, bg=EDIT_BG, align="CENTER", validation={"condition": {"type": "BOOLEAN"}, "strict": True})
     c["sent"] = cell(bg=DAY_BG, fg=MUTED, size=8)
     c["daykey"] = cell(day_key)
@@ -274,6 +280,12 @@ def header_cells(h, day_key, label):
     c["mail"] = cell(f'=Config!$B$10&" finished "&{k("order")}&" – "&TEXT({date},"ddd mmm d")&" 💪"')
     kb = (f'IF({k("kbmin")}="","not logged","<b>"&{k("kbmin")}&" min</b> ("&TEXT({k("kbstart")},"h:mm am/pm")'
           f'&"–"&TEXT({k("kbstop")},"h:mm am/pm")&")")')
+    bw, d = k("rest"), col("rest")
+    prev_tab = f'INDIRECT("\'"&$Q$1&"\'!{d}4:{d}39")'
+    prev = (f'IFERROR(INDEX(FILTER(${d}$3:{d}{h - 1},ISNUMBER(${d}$3:{d}{h - 1})),COUNT(${d}$3:{d}{h - 1})),'
+            f'IF($Q$1="","",IFERROR(INDEX(FILTER({prev_tab},ISNUMBER({prev_tab})),COUNT({prev_tab})),"")))')
+    bw_html = (f'LET(p,{prev},IF(ISNUMBER({bw}),"<b>"&{bw}&" lb</b>"&IF(p="",""," ("&TEXT({bw}-p,"+0.0;-0.0;0")'
+               f'&" lb since last weigh-in)"),"not logged"))')
     hits = f'COUNTIF({col("hit")}{first}:{col("hit")}{last},"✅*")'
     total = f'COUNTIF({col("name")}{first}:{col("name")}{last},"?*")'
     c["html"] = cell(
@@ -281,6 +293,7 @@ def header_cells(h, day_key, label):
         f'<h2 style=\'margin:0 0 4px\'>"&{k("mail")}&"</h2>'
         f'<p style=\'margin:0 0 14px;color:#6b7280\'>Week "&$P$1&" · Block "&$R$1&" (week "&$T$1&" of "&Config!$B$6&")</p>'
         f'<p>🔔 Kettlebell warm-up: "&{kb}&"</p>'
+        f'<p>⚖️ Body weight: "&{bw_html}&"</p>'
         f'<p><b>"&{hits}&" of "&{total}&"</b> exercises hit their rep targets.</p>'
         f'<table cellpadding=\'6\' style=\'border-collapse:collapse;font-size:14px\'>'
         f'<tr style=\'background:#f3f4f6\'><th align=\'left\'>Exercise</th><th>Sets × reps</th><th>Weight</th>'
