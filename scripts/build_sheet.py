@@ -188,9 +188,9 @@ def outbox_requests():
 # ------------------------------------------------------------------ start here
 START = [
     ("How this tracker works", True),
-    ("• Each week gets its own tab (newest first), built automatically every Saturday evening.", False),
+    ("• Each week gets its own tab (newest first), built automatically every Saturday at 7 am.", False),
     ("• Only the YELLOW cells are yours: Weight lifted, AMRAP reps (main lift's last set), "
-     "KB start / KB stop (kettlebell warm-up times), Body weight and the Workout complete checkbox.", False),
+     "KB start / KB stop (kettlebell warm-up times) and the Workout complete checkbox.", False),
     ("• Tap an exercise name for its how-to video. The 🔔 row opens the kettlebell warm-up video.", False),
     ("• Main lift: weight goes up next week when the AMRAP set hits 5+ reps.", False),
     ("• Accessories: weight goes up when you tick Workout complete with a weight logged.", False),
@@ -198,6 +198,8 @@ START = [
     ("• Typing a different weight than suggested makes YOUR number the new baseline.", False),
     ("• Ticking Workout complete emails a summary of the day (within about 30 minutes).", False),
     ("• Exercises rotate every 6 weeks (Block A → B → C). Saturday is rest.", False),
+    ("• Daily Weight: log your weight every morning. A new week of dates appears each Saturday; "
+     "the chart shows daily weigh-ins and the 7-day average. Each workout email includes that day's weight.", False),
     ("• Body Log: add your weekly InBody scan (date, weight, body fat %, skeletal muscle mass). "
      "Daily calorie + protein targets update from your latest lean body mass.", False),
     ("• Nutrition: one row per weighed food (date, food, grams, calories, protein). "
@@ -287,11 +289,10 @@ def header_cells(h, day_key, label):
     c["label"] = cell(f'=IF($S$1="",UPPER({k("order")}),UPPER(TEXT({date},"ddd mmm d"))&" · "&UPPER({k("order")}))',
                       bold=True, bg=DAY_BG)
     c["exercise"] = cell(KB_FORMULA.format(u=k("daykey")), bg=DAY_BG, italic=True, wrap=True)
-    # Body weight: label in C, yellow input in D (both empty on day-header rows otherwise)
-    c["prescription"] = cell("⚖️ Body weight (lb)", bg=DAY_BG, align="RIGHT", italic=True)
-    c["rest"] = cell(bg=EDIT_BG, fmt=NUM, align="CENTER", validation={
-        "condition": {"type": "NUMBER_BETWEEN", "values": [{"userEnteredValue": "50"}, {"userEnteredValue": "700"}]},
-        "inputMessage": "Your body weight today (lb). Optional – included in the daily email.", "strict": True})
+    # Body weight: shown from the Daily Weight tab (logged there, not here)
+    from build_logs import weight_lookup  # late import: build_logs imports this module
+    c["prescription"] = cell("⚖️ Body weight", bg=DAY_BG, align="RIGHT", italic=True)
+    c["rest"] = cell(f'=IFERROR(1/(1/{weight_lookup(date, 2)}),"")', bg=DAY_BG, fmt=NUM, align="CENTER", bold=True)
     c["kbstart"] = cell(bg=EDIT_BG, fmt=TIME, align="CENTER")
     c["kbstop"] = cell(bg=EDIT_BG, fmt=TIME, align="CENTER")
     c["kbmin"] = cell(f'=IF(AND(ISNUMBER({k("kbstart")}),ISNUMBER({k("kbstop")})),'
@@ -304,12 +305,9 @@ def header_cells(h, day_key, label):
     c["mail"] = cell(f'=Config!$B$10&" finished "&{k("order")}&" – "&TEXT({date},"ddd mmm d")&" 💪"')
     kb = (f'IF({k("kbmin")}="","not logged","<b>"&{k("kbmin")}&" min</b> ("&TEXT({k("kbstart")},"h:mm am/pm")'
           f'&"–"&TEXT({k("kbstop")},"h:mm am/pm")&")")')
-    bw, d = k("rest"), col("rest")
-    prev_tab = f'INDIRECT("\'"&$Q$1&"\'!{d}4:{d}39")'
-    prev = (f'IFERROR(INDEX(FILTER(${d}$3:{d}{h - 1},ISNUMBER(${d}$3:{d}{h - 1})),COUNT(${d}$3:{d}{h - 1})),'
-            f'IF($Q$1="","",IFERROR(INDEX(FILTER({prev_tab},ISNUMBER({prev_tab})),COUNT({prev_tab})),"")))')
-    bw_html = (f'LET(p,{prev},IF(ISNUMBER({bw}),"<b>"&{bw}&" lb</b>"&IF(p="",""," ("&TEXT({bw}-p,"+0.0;-0.0;0")'
-               f'&" lb since last weigh-in)"),"not logged"))')
+    bw_html = (f'LET(w,{weight_lookup(date, 2)},a,{weight_lookup(date, 3)},c,{weight_lookup(date, 4)},'
+               'IF(ISNUMBER(w),"<b>"&TEXT(w,"0.0")&" lb</b>"&IF(ISNUMBER(a)," · 7-day average "&TEXT(a,"0.0")&" lb"'
+               '&IF(ISNUMBER(c)," ("&TEXT(c,"+0.0;-0.0;0.0")&" lb vs a week ago)",""),""),"not logged today"))')
     hits = f'COUNTIF({col("hit")}{first}:{col("hit")}{last},"✅*")'
     total = f'COUNTIF({col("name")}{first}:{col("name")}{last},"?*")'
     c["html"] = cell(
@@ -364,7 +362,7 @@ def template_requests():
         dk, _, lbl = LIB["days"][d]
         reqs.append(write(T, DAY_ROWS[d], [[cell(dk), cell(lbl)]], c1=idx("daykey") + 1))
     sat = [cell('=IF($S$1="","SATURDAY · REST",UPPER(TEXT($S$1+6,"ddd mmm d"))&" · REST DAY")', bold=True, bg=REST_BG),
-           cell("Rest day. Next week's tab appears this evening.", italic=True, fg=MUTED, bg=REST_BG)]
+           cell("Rest day. Next week's tab appears at 7 am today. Still log your weight on the Daily Weight tab.", italic=True, fg=MUTED, bg=REST_BG)]
     sat += [cell(bg=REST_BG) for _ in range(idx("sent") - 1)]
     reqs.append(write(T, SAT_ROW, [sat]))
     reqs += widths(T, WIDTHS, hidden_from=len(WIDTHS), total=len(COLS))

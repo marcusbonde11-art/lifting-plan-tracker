@@ -12,7 +12,7 @@ import json
 import pathlib
 import sys
 
-from layout import COLS, SAT_ROW, TEMPLATE_SHEET_ID, editable_ranges, idx
+from layout import COLS, DAY_ROWS, SAT_ROW, TEMPLATE_SHEET_ID, editable_ranges, idx
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GOOGLE = 11391947  # "Marcus's Google connection" (Sheets)
@@ -80,7 +80,14 @@ def generator(sid):
 
     # Snapshot exercises, prescriptions, rest and suggested weights (C:E) plus the hidden
     # lookup columns (O:W) as values, so later Library edits never rewrite past weeks.
-    snapshot = '{"requests":[' + freeze("prescription", "suggested") + "," + freeze("key", "name") + "]}"
+    # The body-weight cell on each day-header row (D) is a live lookup into Daily Weight,
+    # so restore it from the template after the freeze.
+    def restore_weight(h):
+        g = lambda sid: (f'{{"sheetId":{sid},"startRowIndex":{h - 1},"endRowIndex":{h},'
+                         f'"startColumnIndex":{idx("rest")},"endColumnIndex":{idx("rest") + 1}}}')
+        return f'{{"copyPaste":{{"source":{g(TEMPLATE_SHEET_ID)},"destination":{g(sheet_id)},"pasteType":"PASTE_NORMAL"}}}}'
+    snapshot = ('{"requests":[' + ",".join([freeze("prescription", "suggested"), freeze("key", "name")]
+                                           + [restore_weight(h) for h in DAY_ROWS]) + "]}")
     only_when_due = {"name": "Only when next week is due (Saturday) and not built yet",
                      "conditions": [[{"a": flag, "o": "text:equal", "b": "true"}]]}
     return blueprint("Lifting – Weekly Tab Generator (Sat 7am)", [
@@ -90,7 +97,7 @@ def generator(sid):
         sheets_call(2, f"spreadsheets/{sid}:batchUpdate", "POST", body=build, filt=only_when_due, x=300,
                     note="Copy _Template → new week tab, stamp week #/previous tab, lock all but yellow cells"),
         sheets_call(3, f"spreadsheets/{sid}:batchUpdate", "POST", body=snapshot, x=600,
-                    note="Freeze the week's exercises and suggested weights as values"),
+                    note="Freeze the week's exercises and suggested weights as values; keep the body-weight lookups live"),
         sheets_call(4, f"spreadsheets/{sid}/values/Config!B3:B5", "PUT",
                     qs=[("valueInputOption", "USER_ENTERED")],
                     body='{"values":[[' + week + '],["' + name + '"],["' + cur_tab + '"]]}', x=900,

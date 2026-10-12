@@ -1,5 +1,8 @@
 """Body Log (weekly InBody + daily targets), Monthly Check-in and Nutrition tabs."""
-from build_sheet import DATE, EDIT_BG, HEADER_BG, MUTED, NUM, WHITE, cell, grid, widths, write
+from build_sheet import DATE, DAY_BG, EDIT_BG, HEADER_BG, MUTED, NUM, WHITE, cell, grid, widths, write
+
+WDATE = {"type": "DATE", "pattern": "ddd mmm d"}
+NUM1 = {"type": "NUMBER", "pattern": "0.0"}
 
 
 def paint(sheet_id, r1, r2, c1, c2, **fmt):
@@ -103,10 +106,82 @@ def add_sheets(start_index):
                                                                "frozenRowCount": frozen},
                                             "tabColorStyle": {"rgbColor": color}}}}
     green = {"red": 0.086, "green": 0.639, "blue": 0.29}
-    return [props(BODY_SHEET_ID, "Body Log", start_index, FIRST + LOG_ROWS + 5, 5, 0, green),
+    start_index += 1  # Daily Weight goes first
+    return [add_weight_sheet(start_index - 1),
+            props(BODY_SHEET_ID, "Body Log", start_index, FIRST + LOG_ROWS + 5, 5, 0, green),
             props(MONTHLY_SHEET_ID, "Monthly Check-in", start_index + 1, 70, 5, 3, green),
             props(NUTRITION_SHEET_ID, "Nutrition", start_index + 2, 5 + LOG_ROWS * 3 + 5, 6, 4, green)]
 
 
 def log_requests():
-    return body_requests() + monthly_requests() + nutrition_requests()
+    return body_requests() + monthly_requests() + nutrition_requests() + weight_requests()
+
+
+# ------------------------------------------------------------------ Daily Weight
+WEIGHT_SHEET_ID = 8
+WEIGHT_START = (2026, 10, 12)  # first logged day (Mon of week 1)
+W_FIRST, W_LAST = 4, 4 + 7 * 104  # two years of rows
+_W = lambda c: f"{c}{W_FIRST}:{c}"
+# Dates run through the end of the current week, so a new week of rows appears each
+# Saturday morning when the generator advances Config!B3.
+W_DATES = (f'=ARRAYFORMULA(SEQUENCE(Config!$B$2+MAX(1,Config!$B$3)*7-DATE({WEIGHT_START[0]},{WEIGHT_START[1]},'
+           f'{WEIGHT_START[2]}),1,DATE({WEIGHT_START[0]},{WEIGHT_START[1]},{WEIGHT_START[2]})))')
+W_AVG = (f'=MAP({_W("A")},{_W("B")},LAMBDA(d,w,IF(OR(d="",NOT(ISNUMBER(w))),"",'
+         f'ROUND(AVERAGEIFS({_W("B")},{_W("A")},">"&d-7,{_W("A")},"<="&d,{_W("B")},">0"),1))))')
+W_CHANGE = (f'=MAP({_W("A")},{_W("C")},LAMBDA(d,a,IF(NOT(ISNUMBER(a)),"",'
+            f'LET(p,IFERROR(VLOOKUP(d-7,A{W_FIRST}:C,3,FALSE),""),IF(ISNUMBER(p),ROUND(a-p,1),"")))))')
+
+
+def weight_lookup(date_expr, column):
+    """Formula fragment: a column of the Daily Weight row for a date ("" if none)."""
+    return f"IFERROR(VLOOKUP({date_expr},'Daily Weight'!$A${W_FIRST}:$D,{column},FALSE),\"\")"
+
+
+def weight_requests():
+    S = WEIGHT_SHEET_ID
+    head = [cell(h, bold=True, bg=HEADER_BG, fg=WHITE, wrap=True, align="CENTER")
+            for h in ("Date", "Weight (lb)", "7-day average", "Avg vs a week ago")]
+    rows = [[cell("Daily weight", bold=True, size=13)],
+            [cell("Weigh in each morning: after the bathroom, before food or water. Today's row is highlighted.",
+                  fg=MUTED, italic=True)],
+            head, [cell(W_DATES), cell(), cell(W_AVG), cell(W_CHANGE)]]
+    signed = {"type": "NUMBER", "pattern": "+0.0;-0.0;0.0"}
+    chart = {"addChart": {"chart": {
+        "spec": {"title": "Body weight – daily weigh-ins and 7-day average",
+                 "basicChart": {
+                     "chartType": "LINE", "legendPosition": "BOTTOM_LEGEND", "headerCount": 1,
+                     "interpolateNulls": True,
+                     "axis": [{"position": "BOTTOM_AXIS", "title": "Date"},
+                              {"position": "LEFT_AXIS", "title": "lb", "viewWindowOptions": {"viewWindowMode": "PRETTY"}}],
+                     "domains": [{"domain": {"sourceRange": {"sources": [grid(S, 3, 1, W_LAST, 1)]}}}],
+                     "series": [
+                         {"series": {"sourceRange": {"sources": [grid(S, 3, 2, W_LAST, 2)]}},
+                          "targetAxis": "LEFT_AXIS", "color": {"red": 0.58, "green": 0.64, "blue": 0.72},
+                          "lineStyle": {"width": 1}, "pointStyle": {"shape": "CIRCLE", "size": 4}},
+                         {"series": {"sourceRange": {"sources": [grid(S, 3, 3, W_LAST, 3)]}},
+                          "targetAxis": "LEFT_AXIS", "color": {"red": 0.145, "green": 0.388, "blue": 0.922},
+                          "lineStyle": {"width": 3}}]}},
+        "position": {"overlayPosition": {"anchorCell": {"sheetId": S, "rowIndex": 0, "columnIndex": 5},
+                                         "widthPixels": 640, "heightPixels": 360}}}}}
+    today = {"addConditionalFormatRule": {"index": 0, "rule": {
+        "ranges": [grid(S, W_FIRST, 1, W_LAST, 4)],
+        "booleanRule": {"condition": {"type": "CUSTOM_FORMULA", "values": [{"userEnteredValue": f"=$A{W_FIRST}=TODAY()"}]},
+                        "format": {"textFormat": {"bold": True}, "backgroundColor": DAY_BG}}}}}
+    valid = {"setDataValidation": {"range": grid(S, W_FIRST, 2, W_LAST, 2), "rule": {
+        "condition": {"type": "NUMBER_BETWEEN", "values": [{"userEnteredValue": "50"}, {"userEnteredValue": "700"}]},
+        "inputMessage": "Your weight this morning (lb). Goes into the workout email.", "strict": True}}}
+    return [write(S, 1, rows), paint(S, W_FIRST, W_LAST, 1, 1, fmt=WDATE),
+            paint(S, W_FIRST, W_LAST, 2, 2, bg=EDIT_BG, fmt=NUM1, align="CENTER"),
+            paint(S, W_FIRST, W_LAST, 3, 3, fmt=NUM1, align="CENTER"),
+            paint(S, W_FIRST, W_LAST, 4, 4, fmt=signed, align="CENTER"),
+            valid, today, chart, *widths(S, [125, 95, 95, 110]),
+            {"addProtectedRange": {"protectedRange": {
+                "range": {"sheetId": S}, "description": "Only the yellow weight column is yours to edit",
+                "warningOnly": True, "unprotectedRanges": [grid(S, W_FIRST, 2, W_LAST, 2)]}}}]
+
+
+def add_weight_sheet(index):
+    return {"addSheet": {"properties": {
+        "sheetId": WEIGHT_SHEET_ID, "title": "Daily Weight", "index": index,
+        "gridProperties": {"rowCount": W_LAST + 5, "columnCount": 16, "frozenRowCount": 3},
+        "tabColorStyle": {"rgbColor": {"red": 0.145, "green": 0.388, "blue": 0.922}}}}}

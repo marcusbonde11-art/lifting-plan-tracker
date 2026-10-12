@@ -54,7 +54,6 @@ def editable_ranges(sheet_id):
     for h in DAY_ROWS:
         out.append(rng(h + 1, h + 5, "lifted", "lifted"))   # weight lifted, all 5 exercises
         out.append(rng(h + 1, h + 1, "amrap", "amrap"))     # AMRAP, main lift only
-        out.append(rng(h, h, "rest", "rest"))               # body weight (day-header row, column D)
         out.append(rng(h, h, "kbstart", "kbstop"))          # kettlebell start + stop
         out.append(rng(h, h, "complete", "complete"))       # Workout complete checkbox
     return out

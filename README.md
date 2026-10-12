@@ -44,13 +44,13 @@ Every session:
 | Weight lifted | every exercise row | Leave blank if you used the suggested weight. A different number becomes your new baseline. |
 | AMRAP reps | main-lift row | Reps on the final set. |
 | KB start / KB stop | day header row | Kettlebell warm-up times, e.g. `6:05 am`. Duration is calculated and included in the email. |
-| Body weight (lb) | day header row, column D | Optional. Included in the email with the change since your last weigh-in. |
 | Workout complete ☐ | day header row | Ticking it queues the summary email. |
 
 Other tabs (yellow cells are yours):
 
 | Tab | What you enter | What it calculates |
 |---|---|---|
+| Daily Weight | Your weight each morning. Dates start Mon Oct 12 and run to the end of the current week; the next week's dates appear when the Saturday generator runs. | 7-day average, change vs a week ago, and a line chart (daily weigh-ins as dots, 7-day average as a bold line). That day's weight, average and change go into each workout email; the weekly tab's ⚖️ cell shows it read-only. |
 | Body Log | Weekly InBody scan: date, weight, body fat %, SMM. Goal weight and goal date (B7:B8). | Lean body mass, then the daily targets below. |
 | Monthly Check-in | Date, waist, link to progress photos, notes. | Waist change vs the previous month. |
 | Nutrition | One row per weighed food: date, food, grams, calories, protein. You can also tell Claude in chat what you ate and it will log it ("Logged by" = Claude). | Today's totals vs targets. |
