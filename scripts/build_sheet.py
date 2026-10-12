@@ -196,7 +196,7 @@ START = [
     ("• Accessories: weight goes up when you tick Workout complete with a weight logged.", False),
     ("• Upper body +2.5–5 lb, legs +5–10 lb. Missed target → same weight next week.", False),
     ("• Typing a different weight than suggested makes YOUR number the new baseline.", False),
-    ("• Ticking Workout complete emails a summary of the day (within about 30 minutes).", False),
+    ("• Ticking Workout complete emails a summary of the day (checked every 15 min, 5–11 am).", False),
     ("• Exercises rotate every 6 weeks (Block A → B → C). Saturday is rest.", False),
     ("• Daily Weight: log your weight every morning. A new week of dates appears each Saturday; "
      "the chart shows daily weigh-ins and the 7-day average. Each workout email includes that day's weight.", False),

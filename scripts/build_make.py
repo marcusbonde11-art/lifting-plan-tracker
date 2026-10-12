@@ -6,7 +6,7 @@ Usage:  python scripts/build_make.py <spreadsheetId>
 Blueprints:
   make/setup.blueprint.json           one-shot: creates the spreadsheet
   make/weekly_generator.blueprint.json Saturday 7 am ET: builds next week's tab
-  make/daily_email.blueprint.json     every 30 min, 6 am–11 pm ET: emails completed days
+  make/daily_email.blueprint.json     every 15 min, 5–11 am ET: emails completed days
 """
 import json
 import pathlib
@@ -108,7 +108,7 @@ def generator(sid):
 # ------------------------------------------------------------------ daily email
 def daily_email(sid):
     part = lambda n: '{{get(split(2.value; "§§"); %d)}}' % n
-    return blueprint("Lifting – Workout Complete Email (every 30 min)", [
+    return blueprint("Lifting – Workout Complete Email (every 15 min, 5–11 am)", [
         sheets_call(1, f"spreadsheets/{sid}/values/Outbox!A1:B13", qs=[("majorDimension", "COLUMNS")],
                     note="Pending summaries (days ticked complete, not yet emailed) + recipient"),
         {"id": 2, "module": "builtin:BasicFeeder", "version": 1, "parameters": {},
