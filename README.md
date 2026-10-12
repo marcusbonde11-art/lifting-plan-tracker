@@ -43,7 +43,7 @@ Every session:
 |---|---|---|
 | Weight lifted | every exercise row | Leave blank if you used the suggested weight. A different number becomes your new baseline. |
 | AMRAP reps | main-lift row | Reps on the final set. |
-| KB start / KB stop | day header row | Kettlebell warm-up times, e.g. `6:05 am`. Duration is calculated and included in the email. |
+| ▶ Start KB / ⏹ Stop KB | day header row | Tick boxes. Tick Start when the warm-up begins and Stop when it ends; the time is stamped automatically (hidden columns AB/AC, self-referencing `NOW()` with iterative calculation on). KB min shows ⏱ start time while running, then the minutes. Untick to reset. Times and duration go in the email. |
 | Workout complete ☐ | day header row | Ticking it queues the summary email. |
 
 Other tabs (yellow cells are yours):

@@ -19,6 +19,7 @@ COLS = [
     "kbstart", "kbstop", "kbmin", "complete", "sent",           # J K L M N
     "key", "m", "type", "rephigh", "inc", "video",              # O P Q R S T
     "daykey", "order", "name", "mail", "html", "ready", "ref",  # U V W X Y Z AA
+    "kbt0", "kbt1",                                             # AB AC  KB start/stop timestamps
 ]
 
 FIRST_ROW = 4                                    # first day-header row

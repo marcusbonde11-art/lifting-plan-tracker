@@ -190,7 +190,7 @@ START = [
     ("How this tracker works", True),
     ("• Each week gets its own tab (newest first), built automatically every Saturday at 7 am.", False),
     ("• Only the YELLOW cells are yours: Weight lifted, AMRAP reps (main lift's last set), "
-     "KB start / KB stop (kettlebell warm-up times) and the Workout complete checkbox.", False),
+     "▶ Start KB / ⏹ Stop KB (tick to time the kettlebell warm-up) and the Workout complete checkbox.", False),
     ("• Tap an exercise name for its how-to video. The 🔔 row opens the kettlebell warm-up video.", False),
     ("• Main lift: weight goes up next week when the AMRAP set hits 5+ reps.", False),
     ("• Accessories: weight goes up when you tick Workout complete with a weight logged.", False),
@@ -293,18 +293,23 @@ def header_cells(h, day_key, label):
     from build_logs import weight_lookup  # late import: build_logs imports this module
     c["prescription"] = cell("⚖️ Body weight", bg=DAY_BG, align="RIGHT", italic=True)
     c["rest"] = cell(f'=IFERROR(1/(1/{weight_lookup(date, 2)}),"")', bg=DAY_BG, fmt=NUM, align="CENTER", bold=True)
-    c["kbstart"] = cell(bg=EDIT_BG, fmt=TIME, align="CENTER")
-    c["kbstop"] = cell(bg=EDIT_BG, fmt=TIME, align="CENTER")
-    c["kbmin"] = cell(f'=IF(AND(ISNUMBER({k("kbstart")}),ISNUMBER({k("kbstop")})),'
-                      f'ROUND(MOD({k("kbstop")}-{k("kbstart")},1)*1440),"")', bg=DAY_BG, align="CENTER", bold=True,
-                      fmt={"type": "NUMBER", "pattern": "0"})
+    # KB timer: tick ▶ Start / ⏹ Stop; the hidden AB/AC cells stamp NOW() once and keep it
+    # (self-referencing formulas, which need iterative calculation switched on).
+    tick = {"condition": {"type": "BOOLEAN"}, "strict": True}
+    c["kbstart"] = cell(False, bg=EDIT_BG, align="CENTER", validation=tick)
+    c["kbstop"] = cell(False, bg=EDIT_BG, align="CENTER", validation=tick)
+    for flag, ts in (("kbstart", "kbt0"), ("kbstop", "kbt1")):
+        c[ts] = cell(f'=IF({k(flag)}=TRUE,IF(ISNUMBER({k(ts)}),{k(ts)},NOW()),"")')
+    t0, t1 = k("kbt0"), k("kbt1")
+    c["kbmin"] = cell(f'=IF(AND(ISNUMBER({t0}),ISNUMBER({t1})),ROUND(MAX(0,{t1}-{t0})*1440)&" min",'
+                      f'IF(ISNUMBER({t0}),"⏱ "&TEXT({t0},"h:mm"),""))', bg=DAY_BG, align="CENTER", bold=True)
     c["complete"] = cell(False, bg=EDIT_BG, align="CENTER", validation={"condition": {"type": "BOOLEAN"}, "strict": True})
     c["sent"] = cell(bg=DAY_BG, fg=MUTED, size=8)
     c["daykey"] = cell(day_key)
     c["order"] = cell(label)
     c["mail"] = cell(f'=Config!$B$10&" finished "&{k("order")}&" – "&TEXT({date},"ddd mmm d")&" 💪"')
-    kb = (f'IF({k("kbmin")}="","not logged","<b>"&{k("kbmin")}&" min</b> ("&TEXT({k("kbstart")},"h:mm am/pm")'
-          f'&"–"&TEXT({k("kbstop")},"h:mm am/pm")&")")')
+    kb = (f'IF(AND(ISNUMBER({t0}),ISNUMBER({t1})),"<b>"&ROUND(MAX(0,{t1}-{t0})*1440)&" min</b> ("'
+          f'&TEXT({t0},"h:mm am/pm")&"–"&TEXT({t1},"h:mm am/pm")&")","not logged")')
     bw_html = (f'LET(w,{weight_lookup(date, 2)},a,{weight_lookup(date, 3)},c,{weight_lookup(date, 4)},'
                'IF(ISNUMBER(w),"<b>"&TEXT(w,"0.0")&" lb</b>"&IF(ISNUMBER(a)," · 7-day average "&TEXT(a,"0.0")&" lb"'
                '&IF(ISNUMBER(c)," ("&TEXT(c,"+0.0;-0.0;0.0")&" lb vs a week ago)",""),""),"not logged today"))')
@@ -330,9 +335,9 @@ def header_cells(h, day_key, label):
 
 HEADS = {"label": "Day / #", "exercise": "Exercise (tap for video)", "prescription": "Sets × reps",
          "rest": "Rest", "suggested": "Suggested lb", "lifted": "Weight lifted", "amrap": "AMRAP reps",
-         "hit": "Target hit?", "next": "Next week lb", "kbstart": "KB start", "kbstop": "KB stop",
+         "hit": "Target hit?", "next": "Next week lb", "kbstart": "▶ Start KB", "kbstop": "⏹ Stop KB",
          "kbmin": "KB min", "complete": "Workout complete", "sent": "Email sent"}
-WIDTHS = [130, 230, 120, 70, 85, 85, 70, 85, 85, 80, 80, 60, 85, 115]
+WIDTHS = [130, 230, 120, 70, 85, 85, 70, 85, 85, 70, 70, 75, 85, 115]
 
 
 def template_requests():
@@ -379,7 +384,9 @@ def create_body():
             p["tabColorStyle"] = {"rgbColor": rgb(color)}
         return {"properties": p}
 
-    return {"properties": {"title": "Lifting Plan Tracker", "timeZone": TIMEZONE, "locale": "en_US"},
+    # Iterative calculation lets the KB timer formulas keep their first NOW() stamp.
+    return {"properties": {"title": "Lifting Plan Tracker", "timeZone": TIMEZONE, "locale": "en_US",
+                           "iterativeCalculationSettings": {"maxIterations": 1, "convergenceThreshold": 0.05}},
             "sheets": [props(START_SHEET_ID, "Start Here", 0, cols=1, rows=20, color="#F59E0B"),
                        props(CONFIG_SHEET_ID, "Config", 1, cols=3, rows=20, frozen=1, color="#6B7280"),
                        props(LIBRARY_SHEET_ID, "Library", 2, cols=14, rows=len(library_rows()) + 5, frozen=1,
