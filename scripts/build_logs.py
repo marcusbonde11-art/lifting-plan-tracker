@@ -1,8 +1,9 @@
 """Body Log (weekly InBody + daily targets), Monthly Check-in and Nutrition tabs."""
-from build_sheet import DATE, DAY_BG, EDIT_BG, HEADER_BG, MUTED, NUM, WHITE, cell, grid, widths, write
+from build_sheet import DATE, DAY_BG, EDIT_BG, HEADER_BG, MUTED, NUM, TIME, WHITE, cell, grid, widths, write
 
 WDATE = {"type": "DATE", "pattern": "ddd mmm d"}
 NUM1 = {"type": "NUMBER", "pattern": "0.0"}
+INT = {"type": "NUMBER", "pattern": "0"}
 
 
 def paint(sheet_id, r1, r2, c1, c2, **fmt):
@@ -39,7 +40,9 @@ BODY_TARGETS = [  # (label, value, note, format, is_input) – rows 2..13
     ("Daily calorie target", '=IF(B10="","",B10+B11)', "", NUM, False),
     ("Daily protein target (g)", '=IF(B6="","",ROUND(B6))', "≈1 g per lb of lean body mass.", NUM, False),
 ]
-BODY_HEADERS = ["Date", "Weight (lb)", "Body fat %", "Skeletal muscle mass (lb)", "Lean body mass (lb)"]
+# F:G (visceral fat, test time) are written by scripts/inbody.py from a photo of the printout.
+BODY_HEADERS = ["Date", "Weight (lb)", "Body fat %", "Skeletal muscle mass (lb)", "Lean body mass (lb)",
+                "Visceral fat level", "Test time"]
 
 
 def body_requests():
@@ -54,7 +57,8 @@ def body_requests():
            f'ROUND(B{FIRST}:B{LAST}*(1-C{FIRST}:C{LAST}/100),1),""))')
     return [write(S, 1, rows), write(S, FIRST - 1, [head, [cell(), cell(), cell(), cell(), cell(lbm)]]),
             paint(S, FIRST, LAST, 1, 1, bg=EDIT_BG, fmt=DATE), paint(S, FIRST, LAST, 2, 4, bg=EDIT_BG, fmt=NUM),
-            paint(S, FIRST, LAST, 5, 5, fmt=NUM), *widths(S, [190, 120, 120, 150, 150]),
+            paint(S, FIRST, LAST, 5, 5, fmt=NUM), paint(S, FIRST, LAST, 6, 6, bg=EDIT_BG, fmt=INT),
+            paint(S, FIRST, LAST, 7, 7, bg=EDIT_BG, fmt=TIME), *widths(S, [190, 120, 120, 150, 150, 110, 100]),
             *[{"addProtectedRange": {"protectedRange": {
                 "range": {"sheetId": S, "startRowIndex": r1, "endRowIndex": r2, "startColumnIndex": 1, "endColumnIndex": 2},
                 "description": "Calculated targets", "warningOnly": True}}} for r1, r2 in ((1, 6), (9, 13))],
@@ -108,7 +112,7 @@ def add_sheets(start_index):
     green = {"red": 0.086, "green": 0.639, "blue": 0.29}
     start_index += 1  # Daily Weight goes first
     return [add_weight_sheet(start_index - 1),
-            props(BODY_SHEET_ID, "Body Log", start_index, FIRST + LOG_ROWS + 5, 5, 0, green),
+            props(BODY_SHEET_ID, "Body Log", start_index, FIRST + LOG_ROWS + 5, len(BODY_HEADERS), 0, green),
             props(MONTHLY_SHEET_ID, "Monthly Check-in", start_index + 1, 70, 5, 3, green),
             props(NUTRITION_SHEET_ID, "Nutrition", start_index + 2, 5 + LOG_ROWS * 3 + 5, 6, 4, green)]
 

@@ -51,9 +51,17 @@ Other tabs (yellow cells are yours):
 | Tab | What you enter | What it calculates |
 |---|---|---|
 | Daily Weight | Your weight each morning. Dates start Mon Oct 12 and run to the end of the current week; the next week's dates appear when the Saturday generator runs. | 7-day average, change vs a week ago, and a line chart (daily weigh-ins as dots, 7-day average as a bold line). That day's weight, average and change go into each workout email; the weekly tab's ⚖️ cell shows it read-only. |
-| Body Log | Weekly InBody scan: date, weight, body fat %, SMM. Goal weight and goal date (B7:B8). | Lean body mass, then the daily targets below. |
+| Body Log | Weekly InBody scan: date, weight, body fat %, SMM, visceral fat level, test time. Or paste a photo of the printout into Claude and it logs the row (see below). Goal weight and goal date (B7:B8). | Lean body mass, then the daily targets below. |
 | Monthly Check-in | Date, waist, link to progress photos, notes. | Waist change vs the previous month. |
 | Nutrition | One row per weighed food: date, food, grams, calories, protein. You can also tell Claude in chat what you ate and it will log it ("Logged by" = Claude). | Today's totals vs targets. |
+
+**Logging an InBody scan from a photo:** paste a photo of the printout into a Claude Code chat on this repo.
+Claude follows `.claude/skills/log-inbody/SKILL.md`:
+- It reads the date, time, weight, body fat %, SMM and visceral fat level.
+- `scripts/inbody.py` checks each value against a plausible range and picks the row (the next empty one from row 16).
+- It writes A:D and F:G. Column E is the lean-mass formula and is never written.
+- If any field is blurry, cut off or out of range, nothing is written. Claude names the field and asks you to confirm it or send a clearer photo.
+- If a scan with the same date already exists, Claude asks before overwriting it.
 
 **Daily targets** (Body Log, recalculated from the latest scan):
 - Protein = 1 g per lb of lean body mass.
@@ -107,6 +115,8 @@ The blueprints are in `make/` and are regenerated with `python scripts/build_mak
 - `program/library.yaml`: all three blocks, rest times, increments and video links.
 - `scripts/layout.py`: column and row layout shared by the builders.
 - `scripts/build_logs.py`: Body Log, Monthly Check-in and Nutrition tabs.
+- `scripts/inbody.py`: checks values read from an InBody photo and plans the Body Log write.
+- `.claude/skills/log-inbody/`: the photo-to-Body-Log procedure Claude follows.
 - `scripts/targets.py`: Python mirror of the calorie and protein target formulas.
 - `scripts/build_sheet.py`: Google Sheets API payloads (`build/create.json`, `build/requests.json`).
 - `scripts/build_make.py`: Make blueprints.

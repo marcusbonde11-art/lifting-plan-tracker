@@ -200,7 +200,8 @@ START = [
     ("• Exercises rotate every 6 weeks (Block A → B → C). Saturday is rest.", False),
     ("• Daily Weight: log your weight every morning. A new week of dates appears each Saturday; "
      "the chart shows daily weigh-ins and the 7-day average. Each workout email includes that day's weight.", False),
-    ("• Body Log: add your weekly InBody scan (date, weight, body fat %, skeletal muscle mass). "
+    ("• Body Log: add your weekly InBody scan (date, weight, body fat %, skeletal muscle mass, visceral fat, time), "
+     "or paste a photo of the printout into Claude and it logs the row. "
      "Daily calorie + protein targets update from your latest lean body mass.", False),
     ("• Nutrition: one row per weighed food (date, food, grams, calories, protein). "
      "Yesterday's totals and surplus/deficit go into the next workout email.", False),
