@@ -40,9 +40,18 @@ BODY_TARGETS = [  # (label, value, note, format, is_input) – rows 2..13
     ("Daily calorie target", '=IF(B10="","",B10+B11)', "", NUM, False),
     ("Daily protein target (g)", '=IF(B6="","",ROUND(B6))', "≈1 g per lb of lean body mass.", NUM, False),
 ]
-# F:G (visceral fat, test time) are written by scripts/inbody.py from a photo of the printout.
-BODY_HEADERS = ["Date", "Weight (lb)", "Body fat %", "Skeletal muscle mass (lb)", "Lean body mass (lb)",
-                "Visceral fat level", "Test time"]
+# F:G (visceral fat, test time) and H:T (segmental readings) are written by scripts/inbody.py
+# from a photo of the printout. H:T sit to the right of the original columns so nothing moved.
+LB2 = {"type": "NUMBER", "pattern": "0.0#"}
+RATIO = {"type": "NUMBER", "pattern": "0.000"}
+SEGMENTS = [("ra", "Right arm"), ("la", "Left arm"), ("tr", "Trunk"), ("rl", "Right leg"), ("ll", "Left leg")]
+# (field, header, number format) for columns H..T, in order
+SEGMENTAL = ([(f"{k}_lb", f"{n} lean (lb)", LB2) for k, n in SEGMENTS]
+             + [(f"{k}_pct", f"{n} % of ideal", NUM1) for k, n in SEGMENTS]
+             + [("bfm", "Body fat mass (lb)", NUM1), ("ecw", "ECW/TBW", RATIO), ("bmr", "BMR (kcal)", INT)])
+SEG_FIRST_COL = 8  # H
+BODY_HEADERS = (["Date", "Weight (lb)", "Body fat %", "Skeletal muscle mass (lb)", "Lean body mass (lb)",
+                 "Visceral fat level", "Test time"] + [h for _, h, _ in SEGMENTAL])
 
 
 def body_requests():
@@ -59,6 +68,7 @@ def body_requests():
             paint(S, FIRST, LAST, 1, 1, bg=EDIT_BG, fmt=DATE), paint(S, FIRST, LAST, 2, 4, bg=EDIT_BG, fmt=NUM),
             paint(S, FIRST, LAST, 5, 5, fmt=NUM), paint(S, FIRST, LAST, 6, 6, bg=EDIT_BG, fmt=INT),
             paint(S, FIRST, LAST, 7, 7, bg=EDIT_BG, fmt=TIME), *widths(S, [190, 120, 120, 150, 150, 110, 100]),
+            *segmental_requests(),
             *[{"addProtectedRange": {"protectedRange": {
                 "range": {"sheetId": S, "startRowIndex": r1, "endRowIndex": r2, "startColumnIndex": 1, "endColumnIndex": 2},
                 "description": "Calculated targets", "warningOnly": True}}} for r1, r2 in ((1, 6), (9, 13))],
@@ -66,6 +76,21 @@ def body_requests():
                 "range": {"sheetId": S, "startRowIndex": FIRST - 1, "endRowIndex": LAST,
                           "startColumnIndex": 4, "endColumnIndex": 5},
                 "description": "Calculated lean body mass", "warningOnly": True}}}]
+
+
+def segmental_requests():
+    """Headers, yellow formats and widths for the body-part columns H..T (also applied to the live sheet)."""
+    S = BODY_SHEET_ID
+    head = [cell(h, bold=True, bg=HEADER_BG, fg=WHITE, wrap=True, align="CENTER") for _, h, _ in SEGMENTAL]
+    out = [write(S, FIRST - 1, [head], c1=SEG_FIRST_COL)]
+    for i, (_, _, fmt) in enumerate(SEGMENTAL):
+        c = SEG_FIRST_COL + i
+        out.append(paint(S, FIRST, LAST, c, c, bg=EDIT_BG, fmt=fmt))
+    out.append({"updateDimensionProperties": {
+        "range": {"sheetId": S, "dimension": "COLUMNS", "startIndex": SEG_FIRST_COL - 1,
+                  "endIndex": SEG_FIRST_COL - 1 + len(SEGMENTAL)},
+        "properties": {"pixelSize": 95}, "fields": "pixelSize"}})
+    return out
 
 
 # ------------------------------------------------------------------ Monthly Check-in

@@ -13,16 +13,18 @@ Usage:  python scripts/build_sheet.py
 import json
 import pathlib
 
-import yaml
-
+import program
+import timing
 from layout import (
-    ATHLETE, COLS, CONFIG_SHEET_ID, DAY_ROWS, LIBRARY_SHEET_ID, OUTBOX_SHEET_ID,
-    PROGRAM_START, SAT_ROW, START_SHEET_ID, TEMPLATE_SHEET_ID, TIMEZONE, WIFE_EMAIL,
-    col, idx,
+    ATHLETE, COLS, CONFIG_SHEET_ID, DAY_ROWS, DAY_SPAN, EXERCISES_PER_DAY, FIRST_ROW, LAST_ROW,
+    LIBRARY_SHEET_ID, OUTBOX_SHEET_ID, PROGRAM_START, SAT_ROW, START_SHEET_ID, TEMPLATE_SHEET_ID,
+    TIMEZONE, WIFE_EMAIL, col, idx,
 )
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LIB = yaml.safe_load((ROOT / "program" / "library.yaml").read_text())
+LIB = program.load()  # library.yaml + end-of-block adjustments
+TIMING = LIB["timing"]
+V2_START_WEEK = 4  # Config!B20: week 4 (Sun Nov 1 2026) is week 1 of block D
 
 
 # ------------------------------------------------------------------ helpers
@@ -108,19 +110,26 @@ def lock(sheet_id, description):
 
 
 # ------------------------------------------------------------------ library
+# A–N keep their original letters (the weekly tab reads them); O–S were added for v2 supersets.
 LIB_HEADERS = ["Key", "Block", "Day", "Order", "Exercise", "Region", "Type", "Sets", "Rep low",
-               "Rep high", "Rest", "How-to video", "Increment (lb)", "Equipment"]
+               "Rep high", "Rest", "How-to video", "Increment (lb)", "Equipment",
+               "Slot", "Muscle", "Start lb", "Superset min", "Day lifting min"]
 
 
 def library_rows():
-    rest = {t: v["rest"] for t, v in LIB["types"].items()}
     out = []
     for block, days in LIB["blocks"].items():
+        starts = LIB.get("start_lb", {}).get(block, {})
         for day_key, _, _ in LIB["days"]:
-            for order, (name, typ, sets, lo, hi, inc, equip, url) in enumerate(days[day_key], 1):
+            exercises = days[day_key]
+            rest = program.rest_for(LIB, block, day_key)
+            ss_min, day_min = timing.day_minutes(exercises, TIMING, rest)
+            for order, (name, typ, sets, lo, hi, inc, equip, muscle, url) in enumerate(exercises, 1):
                 region = "Legs" if day_key.startswith("L") else "Upper"
                 out.append([f"{block}|{day_key}|{order}", block, day_key, order, name, region, typ,
-                            sets, lo, hi, rest[typ], url, inc, equip])
+                            sets, lo, hi, timing.rest_text(order, exercises, TIMING, rest), url, inc, equip,
+                            timing.slot(order), muscle, starts.get(f"{day_key}|{order}", ""),
+                            ss_min[(order - 1) // 2], day_min])
     return out
 
 
@@ -132,14 +141,15 @@ def library_requests():
         {"repeatCell": {"range": grid(LIBRARY_SHEET_ID, 1, 1, 1, len(LIB_HEADERS)),
                         "cell": cell(bold=True, bg=HEADER_BG, fg=WHITE),
                         "fields": "userEnteredFormat"}},
-        *widths(LIBRARY_SHEET_ID, [100, 50, 45, 50, 290, 60, 105, 45, 60, 65, 70, 330, 95, 90]),
+        *widths(LIBRARY_SHEET_ID, [100, 50, 45, 50, 290, 60, 105, 45, 60, 65, 250, 330, 95, 90,
+                                   50, 90, 70, 90, 110]),
         lock(LIBRARY_SHEET_ID, "Library is locked – edit program/library.yaml and rebuild"),
     ]
 
 
 # ------------------------------------------------------------------ config
 KB = LIB["kettlebell"]
-CONFIG = [  # (label, value, note, format) – rows 2..16
+CONFIG = [  # (label, value, note, format) – rows 2..20
     ("Program start (first Sunday)", "=DATE(%d,%d,%d)" % PROGRAM_START, "Week 1 starts this Sunday.", DATE),
     ("Current week #", 0, "Set by the Saturday generator.", None),
     ("Current tab", "", "Set by the Saturday generator.", None),
@@ -159,6 +169,8 @@ CONFIG = [  # (label, value, note, format) – rows 2..16
     ("Kettlebell warm-up – Push days", KB["push"]["url"], KB["push"]["title"], None),   # row 17
     ("Kettlebell warm-up – Pull days", KB["pull"]["url"], KB["pull"]["title"], None),   # row 18
     ("Kettlebell warm-up – Leg days", KB["legs"]["url"], KB["legs"]["title"], None),    # row 19
+    ("Plan v2 starts at week #", V2_START_WEEK,
+     "45-minute superset plan. Blocks D → E → F rotate from this week.", None),          # row 20
 ]
 
 
@@ -171,7 +183,7 @@ def config_requests():
 
 # ------------------------------------------------------------------ outbox
 def tab_range(c, t="t"):
-    return f'INDIRECT("\'"&{t}&"\'!{c}4:{c}40")'
+    return f'INDIRECT("\'"&{t}&"\'!{c}{FIRST_ROW}:{c}{LAST_ROW}")'
 
 
 OUTBOX = ('=LET(cur,Config!B4,prev,Config!B5,f,LAMBDA(t,IF(t="",{""},IFERROR(FILTER('
@@ -188,21 +200,26 @@ def outbox_requests():
 # ------------------------------------------------------------------ start here
 START = [
     ("How this tracker works", True),
+    ("• 45 minutes a day: 15 min kettlebell warm-up, then 30 min of lifting in three supersets.", False),
+    ("• Superset = do 1A, walk straight to 1B, rest, repeat. Labels 1A/1B, 2A/2B, 3A/3B are in column A; "
+     "the Rest column says what's next and how long each superset takes. Set up each pair side by side.", False),
+    ("• 1A is the heavy lift: two quick ramp-up sets, then 4 × 3–5, last set AMRAP. The 1B set fills its rest (~2.5 min).", False),
     ("• Each week gets its own tab (newest first), built automatically every Saturday at 7 am.", False),
-    ("• Only the YELLOW cells are yours: Weight lifted, AMRAP reps (main lift's last set), "
+    ("• Only the YELLOW cells are yours: Weight lifted, AMRAP reps (heavy lift's last set), "
      "▶ Start KB / ⏹ Stop KB (tick to time the kettlebell warm-up) and the Workout complete checkbox.", False),
-    ("• Tap an exercise name for its how-to video. The 🔔 row opens the kettlebell warm-up video.", False),
-    ("• Main lift: weight goes up next week when the AMRAP set hits 5+ reps.", False),
+    ("• Tap an exercise name for its how-to video. The 🔔 row opens the kettlebell warm-up video and shows the day's time math.", False),
+    ("• Heavy lift: weight goes up next week when the AMRAP set hits 5+ reps.", False),
     ("• Accessories: weight goes up when you tick Workout complete with a weight logged.", False),
     ("• Upper body +2.5–5 lb, legs +5–10 lb. Missed target → same weight next week.", False),
     ("• Typing a different weight than suggested makes YOUR number the new baseline.", False),
     ("• Ticking Workout complete emails a summary of the day (checked every 15 min, 5–11 am).", False),
-    ("• Exercises rotate every 6 weeks (Block A → B → C). Saturday is rest.", False),
+    ("• Exercises rotate every 6 weeks (Block D → E → F). Belt squat is the heavy lift on both leg days. "
+     "At the end of each block the plan recalculates from your InBody scan, weight, food log and lifts "
+     "(see the Block Review tab). Saturday is rest.", False),
     ("• Daily Weight: log your weight every morning. A new week of dates appears each Saturday; "
      "the chart shows daily weigh-ins and the 7-day average. Each workout email includes that day's weight.", False),
-    ("• Body Log: add your weekly InBody scan (date, weight, body fat %, skeletal muscle mass, visceral fat, time), "
-     "or paste a photo of the printout into Claude and it logs the row. "
-     "Daily calorie + protein targets update from your latest lean body mass.", False),
+    ("• Body Log: add your InBody scan, or paste a photo of the printout into Claude and it logs the row, "
+     "including the body-part (segmental) readings. Daily calorie + protein targets update from your latest lean body mass.", False),
     ("• Nutrition: one row per weighed food (date, food, grams, calories, protein). "
      "Yesterday's totals and surplus/deficit go into the next workout email.", False),
     ("• Monthly Check-in: waist measurement + a link to that month's progress photos.", False),
@@ -224,14 +241,16 @@ def exercise_cells(r, h, order):
     k = lambda n: f"{col(n)}{r}"
     used = f'IF({k("lifted")}<>"",{k("lifted")},{k("suggested")})'
     c = {n: cell() for n in COLS}
-    c["label"] = cell(f'=IF({k("name")}="","",IF({k("type")}="Heavy","MAIN","Acc "&({k("order")}-1)))',
-                      fg=MUTED, align="CENTER")
+    c["label"] = cell(f'=IF({k("name")}="","",{lib("O", r)}&IF({k("type")}="Heavy"," · MAIN",""))',
+                      fg=MUTED, align="CENTER", bold=True)
     c["exercise"] = cell(f'=IF({k("name")}="","",HYPERLINK({k("video")},{k("name")}))', wrap=True)
     c["prescription"] = cell(f'=IF({k("name")}="","",{lib("H", r)}&" × "&{lib("I", r)}&"–"&{lib("J", r)}'
                              f'&IF({k("type")}="Heavy"," (last set AMRAP)",""))', align="CENTER", wrap=True)
     c["rest"] = cell("=" + lib("K", r), align="CENTER")
-    c["suggested"] = cell(f'=IF(OR({k("key")}="",$Q$1=""),"",IFERROR(INDEX(INDIRECT("\'"&$Q$1&"\'!I4:I40"),'
-                          f'MATCH({k("key")},INDIRECT("\'"&$Q$1&"\'!O4:O40"),0)),""))',
+    # Last week's "Next week lb" for this exercise; in a block's first week, the Library's start weight.
+    prev = lambda c_: f'INDIRECT("\'"&$Q$1&"\'!{c_}{FIRST_ROW}:{c_}{LAST_ROW}")'
+    c["suggested"] = cell(f'=IF({k("key")}="","",LET(p,IF($Q$1="","",IFERROR(INDEX({prev("I")},'
+                          f'MATCH({k("key")},{prev("O")},0)),"")),IF(N(p)>0,p,IFERROR(1/(1/{lib("Q", r)}),""))))',
                           fmt=NUM, align="CENTER", bold=True)
     c["lifted"] = cell(bg=EDIT_BG, fmt=NUM, align="CENTER", validation={
         "condition": {"type": "NUMBER_BETWEEN", "values": [{"userEnteredValue": "0"}, {"userEnteredValue": "2000"}]},
@@ -256,7 +275,7 @@ def exercise_cells(r, h, order):
     c["name"] = cell("=" + lib("E", r))
     td = "<td align='center' style='border-top:1px solid #e5e7eb'>"
     c["mail"] = cell(
-        f'=IF({k("name")}="","","<tr><td style=\'border-top:1px solid #e5e7eb\'>"&SUBSTITUTE({k("name")},"&","&amp;")&"</td>'
+        f'=IF({k("name")}="","","<tr><td style=\'border-top:1px solid #e5e7eb\'>"&{k("label")}&" · "&SUBSTITUTE({k("name")},"&","&amp;")&"</td>'
         f'{td}"&{k("prescription")}&"</td>{td}"&IF(N({used})=0,"—",{used}&" lb")&"</td>'
         f'{td}"&IF({k("type")}="Heavy",IF({k("amrap")}="","—",{k("amrap")}&" reps"),"")&"</td>'
         f'{td}"&IF({k("hit")}="","—",{k("hit")})&"</td>'
@@ -265,8 +284,10 @@ def exercise_cells(r, h, order):
 
 
 # Config rows 17/18/19 hold the push/pull/legs warm-up video (B) and its title (C).
-KB_FORMULA = ('=LET(t,LEFT({u},2),r,IF(t="PU",18,IF(LEFT(t,1)="P",17,19)),'
-              'HYPERLINK(INDEX(Config!$B:$B,r),"🔔 Kettlebell warm-up, 15 min: "&INDEX(Config!$C:$C,r)))')
+# Library!S is the day's lifting minutes (scripts/timing.py), looked up via the first exercise row.
+KB_FORMULA = ('=LET(t,LEFT({u},2),r,IF(t="PU",18,IF(LEFT(t,1)="P",17,19)),d,IFERROR(INDEX(Library!$S:$S,{m}),""),'
+              'HYPERLINK(INDEX(Config!$B:$B,r),"🔔 %d min kettlebell + "&d&" min lifting = "&(%d+N(d))&" min'
+              ' · warm-up: "&INDEX(Config!$C:$C,r)))') % (TIMING["kettlebell_min"], TIMING["kettlebell_min"])
 
 
 def nutrition_html(date):
@@ -283,13 +304,13 @@ def nutrition_html(date):
 
 def header_cells(h, day_key, label):
     k = lambda n: f"{col(n)}{h}"
-    first, last = h + 1, h + 5
-    date = "($S$1+(ROW()-4)/6)"
+    first, last = h + 1, h + EXERCISES_PER_DAY
+    date = f"($S$1+(ROW()-{FIRST_ROW})/{DAY_SPAN})"
     c = {n: cell(bg=DAY_BG) for n in COLS[:idx("sent") + 1]}
     c.update({n: cell() for n in COLS[idx("sent") + 1:]})
     c["label"] = cell(f'=IF($S$1="",UPPER({k("order")}),UPPER(TEXT({date},"ddd mmm d"))&" · "&UPPER({k("order")}))',
                       bold=True, bg=DAY_BG)
-    c["exercise"] = cell(KB_FORMULA.format(u=k("daykey")), bg=DAY_BG, italic=True, wrap=True)
+    c["exercise"] = cell(KB_FORMULA.format(u=k("daykey"), m=f'{col("m")}{first}'), bg=DAY_BG, italic=True, wrap=True)
     # Body weight: shown from the Daily Weight tab (logged there, not here)
     from build_logs import weight_lookup  # late import: build_logs imports this module
     c["prescription"] = cell("⚖️ Body weight", bg=DAY_BG, align="RIGHT", italic=True)
@@ -325,7 +346,7 @@ def header_cells(h, day_key, label):
         f'"&{nutrition_html(date)}&"'
         f'<p><b>"&{hits}&" of "&{total}&"</b> exercises hit their rep targets.</p>'
         f'<table cellpadding=\'6\' style=\'border-collapse:collapse;font-size:14px\'>'
-        f'<tr style=\'background:#f3f4f6\'><th align=\'left\'>Exercise</th><th>Sets × reps</th><th>Weight</th>'
+        f'<tr style=\'background:#f3f4f6\'><th align=\'left\'>Superset · exercise</th><th>Sets × reps</th><th>Weight</th>'
         f'<th>AMRAP</th><th>Target hit?</th><th>Next week</th></tr>"'
         f'&TEXTJOIN("",TRUE,{col("mail")}{first}:{col("mail")}{last})&"</table>'
         f'<p style=\'color:#9ca3af;font-size:12px\'>⬆ = weight goes up next week. Sent automatically by the lifting tracker.</p></div>"')
@@ -334,11 +355,11 @@ def header_cells(h, day_key, label):
     return [c[n] for n in COLS]
 
 
-HEADS = {"label": "Day / #", "exercise": "Exercise (tap for video)", "prescription": "Sets × reps",
-         "rest": "Rest", "suggested": "Suggested lb", "lifted": "Weight lifted", "amrap": "AMRAP reps",
+HEADS = {"label": "Day / superset", "exercise": "Exercise (tap for video)", "prescription": "Sets × reps",
+         "rest": "Next / rest", "suggested": "Suggested lb", "lifted": "Weight lifted", "amrap": "AMRAP reps",
          "hit": "Target hit?", "next": "Next week lb", "kbstart": "▶ Start KB", "kbstop": "⏹ Stop KB",
          "kbmin": "KB min", "complete": "Workout complete", "sent": "Email sent"}
-WIDTHS = [130, 230, 120, 70, 85, 85, 70, 85, 85, 70, 70, 75, 85, 115]
+WIDTHS = [130, 230, 120, 210, 85, 85, 70, 85, 85, 70, 70, 75, 85, 115]
 
 
 def template_requests():
@@ -346,23 +367,26 @@ def template_requests():
     title = cell('=IF(P1="","Template – do not edit","Week "&P1&" · Block "&R1&" (week "&T1&" of "&Config!$B$6&") · "'
                  '&TEXT(S1,"ddd mmm d")&" – "&TEXT(S1+6,"ddd mmm d"))', bold=True, size=14)
     # Row 1: O1 tab name, P1 week #, Q1 previous tab (all written by Make), R1 block, S1 start date, T1 week-in-block
-    meta = [cell('=IF(P1="","",MID("ABC",MOD(INT((P1-1)/Config!$B$6),Config!$B$7)+1,1))'),
+    # v2 blocks D/E/F count from Config!B20 (the week the 45-minute plan started).
+    meta = [cell('=IF(P1="","",MID("DEF",MOD(INT((P1-Config!$B$20)/Config!$B$6),Config!$B$7)+1,1))'),
             cell('=IF(P1="","",Config!$B$2+(P1-1)*7)', fmt={"type": "DATE", "pattern": "yyyy-mm-dd"}),
-            cell('=IF(P1="","",MOD(P1-1,Config!$B$6)+1)')]
+            cell('=IF(P1="","",MOD(P1-Config!$B$20,Config!$B$6)+1)')]
     day_key, _, label = LIB["days"][0]
     h = DAY_ROWS[0]
-    block = [header_cells(h, day_key, label)] + [exercise_cells(h + o, h, o) for o in range(1, 6)]
+    block = [header_cells(h, day_key, label)] + [exercise_cells(h + o, h, o)
+                                                 for o in range(1, EXERCISES_PER_DAY + 1)]
     reqs = [
         write(T, 1, [[title]]),
         write(T, 1, [meta], c1=idx("rephigh") + 1),
-        write(T, 2, [[cell("✏️ Fill in only the yellow cells. Tap an exercise for its how-to video.", fg=MUTED, italic=True)]]),
+        write(T, 2, [[cell("✏️ Fill in only the yellow cells. Tap an exercise for its how-to video. "
+                           "Superset: 1A → 1B → rest → repeat, then 2A/2B, then 3A/3B.", fg=MUTED, italic=True)]]),
         write(T, 3, [[cell(HEADS[n], bold=True, bg=HEADER_BG, fg=WHITE, align="CENTER", wrap=True) for n in HEADS]]),
         write(T, h, block),
     ]
-    # copy day 1's block to days 2–6 (relative references shift by 6 rows each time)
+    # copy day 1's block to days 2–6 (relative references shift by DAY_SPAN rows each time)
     for d in range(1, 6):
-        reqs.append({"copyPaste": {"source": grid(T, h, 1, h + 5, len(COLS)),
-                                   "destination": grid(T, DAY_ROWS[d], 1, DAY_ROWS[d] + 5, len(COLS)),
+        reqs.append({"copyPaste": {"source": grid(T, h, 1, h + EXERCISES_PER_DAY, len(COLS)),
+                                   "destination": grid(T, DAY_ROWS[d], 1, DAY_ROWS[d] + EXERCISES_PER_DAY, len(COLS)),
                                    "pasteType": "PASTE_NORMAL"}})
     for d in range(1, 6):
         dk, _, lbl = LIB["days"][d]
@@ -389,8 +413,8 @@ def create_body():
     return {"properties": {"title": "Lifting Plan Tracker", "timeZone": TIMEZONE, "locale": "en_US",
                            "iterativeCalculationSettings": {"maxIterations": 1, "convergenceThreshold": 0.05}},
             "sheets": [props(START_SHEET_ID, "Start Here", 0, cols=1, rows=20, color="#F59E0B"),
-                       props(CONFIG_SHEET_ID, "Config", 1, cols=3, rows=20, frozen=1, color="#6B7280"),
-                       props(LIBRARY_SHEET_ID, "Library", 2, cols=14, rows=len(library_rows()) + 5, frozen=1,
+                       props(CONFIG_SHEET_ID, "Config", 1, cols=3, rows=len(CONFIG) + 3, frozen=1, color="#6B7280"),
+                       props(LIBRARY_SHEET_ID, "Library", 2, cols=len(LIB_HEADERS), rows=len(library_rows()) + 5, frozen=1,
                              color="#6B7280"),
                        props(OUTBOX_SHEET_ID, "Outbox", 3, hidden=True, cols=2, rows=30),
                        props(TEMPLATE_SHEET_ID, "_Template", 4, hidden=True, cols=len(COLS), rows=SAT_ROW,

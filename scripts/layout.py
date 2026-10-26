@@ -22,10 +22,12 @@ COLS = [
     "kbt0", "kbt1",                                             # AB AC  KB start/stop timestamps
 ]
 
-FIRST_ROW = 4                                    # first day-header row
-DAY_ROWS = [FIRST_ROW + 6 * d for d in range(6)]  # 4, 10, 16, 22, 28, 34
-LAST_ROW = DAY_ROWS[-1] + 5                       # 39
-SAT_ROW = LAST_ROW + 1                            # 40
+EXERCISES_PER_DAY = 6                             # three supersets: 1A 1B 2A 2B 3A 3B
+DAY_SPAN = EXERCISES_PER_DAY + 1                  # header row + exercises
+FIRST_ROW = 4                                     # first day-header row
+DAY_ROWS = [FIRST_ROW + DAY_SPAN * d for d in range(6)]  # 4, 11, 18, 25, 32, 39
+LAST_ROW = DAY_ROWS[-1] + EXERCISES_PER_DAY       # 45
+SAT_ROW = LAST_ROW + 1                            # 46
 
 
 def col(name):
@@ -53,7 +55,7 @@ def editable_ranges(sheet_id):
                 "startColumnIndex": idx(c1), "endColumnIndex": idx(c2) + 1}
 
     for h in DAY_ROWS:
-        out.append(rng(h + 1, h + 5, "lifted", "lifted"))   # weight lifted, all 5 exercises
+        out.append(rng(h + 1, h + EXERCISES_PER_DAY, "lifted", "lifted"))  # weight lifted, every exercise
         out.append(rng(h + 1, h + 1, "amrap", "amrap"))     # AMRAP, main lift only
         out.append(rng(h, h, "kbstart", "kbstop"))          # kettlebell start + stop
         out.append(rng(h, h, "complete", "complete"))       # Workout complete checkbox

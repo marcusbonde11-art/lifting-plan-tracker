@@ -1,12 +1,15 @@
-"""Turn the five fields read off an InBody printout into a checked Body Log write.
+"""Turn the fields read off an InBody printout into a checked Body Log write.
 
 Claude reads the photo; this script decides whether the values are safe to write
 and where they go. It never writes to the sheet itself: it prints the ranges and
 values for the Google Sheets connector (valueInputOption USER_ENTERED).
 
 Usage:
-  python scripts/inbody.py --date 2026-10-18 --time "7:42 AM" --weight 218.8 \
-      --bf 15.8 --smm 105.4 --vfl 6 --existing "Mon Oct 12, 2026" ""
+  python scripts/inbody.py --date 2026-10-26 --time "6:48 AM" --weight 215.9 \
+      --bf 15.9 --smm 103.6 --vfl 7 \
+      --ra_lb 10.94 --la_lb 10.74 --tr_lb 78.7 --rl_lb 28.68 --ll_lb 28.82 \
+      --ra_pct 120.9 --la_pct 118.6 --tr_pct 109.2 --rl_pct 114.0 --ll_pct 114.5 \
+      --bfm 34.2 --ecw 0.378 --bmr 2150 --existing "Mon Oct 12, 2026" ""
   Pass "?" for any field that could not be read clearly.
   --existing is 'Body Log'!A16:A215 as formatted values (blank rows as "").
 
@@ -16,7 +19,7 @@ import argparse
 import datetime
 import json
 
-from build_logs import FIRST, LAST
+from build_logs import FIRST, LAST, SEGMENTAL
 
 TAB = "Body Log"
 UNREADABLE = "?"
@@ -27,7 +30,22 @@ LIMITS = {
     "bf": ("Body fat %", "%", 2, 70, False),
     "smm": ("Skeletal muscle mass", "lb", 30, 200, False),
     "vfl": ("Visceral fat level", "", 1, 20, True),
+    # Segmental lean analysis (lb, then % of ideal), body fat mass, ECW/TBW and BMR – columns H:T
+    "ra_lb": ("Right arm lean", "lb", 3, 30, False),
+    "la_lb": ("Left arm lean", "lb", 3, 30, False),
+    "tr_lb": ("Trunk lean", "lb", 30, 160, False),
+    "rl_lb": ("Right leg lean", "lb", 8, 70, False),
+    "ll_lb": ("Left leg lean", "lb", 8, 70, False),
+    "ra_pct": ("Right arm % of ideal", "%", 50, 200, False),
+    "la_pct": ("Left arm % of ideal", "%", 50, 200, False),
+    "tr_pct": ("Trunk % of ideal", "%", 50, 200, False),
+    "rl_pct": ("Right leg % of ideal", "%", 50, 200, False),
+    "ll_pct": ("Left leg % of ideal", "%", 50, 200, False),
+    "bfm": ("Body fat mass", "lb", 3, 300, False),
+    "ecw": ("ECW/TBW", "", 0.30, 0.45, False),
+    "bmr": ("BMR", "kcal", 900, 4000, True),
 }
+assert [k for k, _, _ in SEGMENTAL] == list(LIMITS)[4:], "LIMITS must follow the Body Log column order"
 DATE_FORMATS = ("%Y-%m-%d", "%Y.%m.%d", "%m/%d/%Y", "%a %b %d, %Y")
 TIME_FORMATS = ("%I:%M %p", "%H:%M", "%I:%M%p")
 
@@ -87,7 +105,25 @@ def check(fields, today=None):
                 problems.append(f"{name}: {raw} {unit} is outside {low}–{high} {unit}; likely a misread")
             else:
                 clean[key] = int(v) if whole else v
+    problems += cross_check(clean)
     return clean, problems
+
+
+def cross_check(clean):
+    """Fields that must agree with each other on a real printout – catches a misread digit
+    that still lands inside its own range."""
+    problems = []
+    if all(k in clean for k in ("weight", "bf", "bfm")):
+        expected = clean["weight"] * clean["bf"] / 100
+        if abs(clean["bfm"] - expected) > 1.5:
+            problems.append(f"Body fat mass: {clean['bfm']} lb doesn't match weight × body fat % "
+                            f"({expected:.1f} lb); one of them is likely a misread")
+    if all(k in clean for k in ("weight", "bfm", "bmr")):
+        expected = 370 + 21.6 * (clean["weight"] - clean["bfm"]) / 2.20462  # InBody's BMR formula
+        if abs(clean["bmr"] - expected) > 0.1 * expected:
+            problems.append(f"BMR: {clean['bmr']} kcal doesn't match lean mass (expected ≈ {expected:.0f}); "
+                            "likely a misread")
+    return problems
 
 
 def plan(clean, existing):
@@ -108,11 +144,12 @@ def plan(clean, existing):
 
 
 def writes(clean, row):
-    """A:D and F:G – column E is the lean-mass ARRAYFORMULA and must stay empty."""
+    """A:D and F:T – column E is the lean-mass ARRAYFORMULA and must stay empty."""
     return [{"range": f"'{TAB}'!A{row}:D{row}",
              "values": [[clean["date"].isoformat(), clean["weight"], clean["bf"], clean["smm"]]]},
-            {"range": f"'{TAB}'!F{row}:G{row}",
-             "values": [[clean["vfl"], clean["time"].strftime("%-I:%M %p")]]}]
+            {"range": f"'{TAB}'!F{row}:T{row}",
+             "values": [[clean["vfl"], clean["time"].strftime("%-I:%M %p")]
+                        + [clean[k] for k, _, _ in SEGMENTAL]]}]
 
 
 def main(argv=None):
