@@ -234,7 +234,8 @@ def start_requests():
 # ------------------------------------------------------------------ weekly template
 def lib(c, r):
     """Library column c for the exercise on row r (via the row's match index)."""
-    return f'IFERROR(INDEX(Library!${c}:${c},{col("m")}{r}),"")'
+    m = f'{col("m")}{r}'
+    return f'IF({m}="","",IFERROR(INDEX(Library!${c}:${c},{m}),""))'
 
 
 def exercise_cells(r, h, order):
@@ -285,7 +286,7 @@ def exercise_cells(r, h, order):
 
 # Config rows 17/18/19 hold the push/pull/legs warm-up video (B) and its title (C).
 # Library!S is the day's lifting minutes (scripts/timing.py), looked up via the first exercise row.
-KB_FORMULA = ('=LET(t,LEFT({u},2),r,IF(t="PU",18,IF(LEFT(t,1)="P",17,19)),d,IFERROR(INDEX(Library!$S:$S,{m}),""),'
+KB_FORMULA = ('=LET(t,LEFT({u},2),r,IF(t="PU",18,IF(LEFT(t,1)="P",17,19)),d,IF({m}="","",IFERROR(INDEX(Library!$S:$S,{m}),"")),'
               'HYPERLINK(INDEX(Config!$B:$B,r),"🔔 %d min kettlebell + "&d&" min lifting = "&(%d+N(d))&" min'
               ' · warm-up: "&INDEX(Config!$C:$C,r)))') % (TIMING["kettlebell_min"], TIMING["kettlebell_min"])
 
