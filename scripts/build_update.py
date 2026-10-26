@@ -10,9 +10,12 @@ re-run on it. This writes targeted updates instead, one file per area:
 
 Apply each file's "requests" with the Google Sheets connector (spreadsheets.batchUpdate).
 Usage:  python scripts/build_update.py
+        python scripts/build_update.py --block E   just block E's Library rows, as
+                                                   {"range", "values"} for update_values
 """
 import json
 import pathlib
+import sys
 
 import build_logs
 import build_sheet as b
@@ -61,7 +64,18 @@ def bodylog():
             *build_logs.segmental_requests()]
 
 
+def library_block_values(block):
+    """Block `block`'s rows of the Library tab (row 1 is the header), as a values write."""
+    rows = b.library_rows()
+    idx = [i for i, r in enumerate(rows) if r[1] == block]
+    first, last = idx[0] + 2, idx[-1] + 2
+    return {"range": f"Library!A{first}:S{last}", "values": [rows[i] for i in idx]}
+
+
 def main():
+    if "--block" in sys.argv:
+        print(json.dumps(library_block_values(sys.argv[sys.argv.index("--block") + 1]), ensure_ascii=False))
+        return
     out = ROOT / "build"
     for name, reqs in (("library", library()), ("template", template()), ("misc", misc()), ("bodylog", bodylog())):
         text = json.dumps({"requests": reqs}, ensure_ascii=False, separators=(",", ":"))
