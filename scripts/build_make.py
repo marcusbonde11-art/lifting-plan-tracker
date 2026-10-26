@@ -16,7 +16,7 @@ from layout import COLS, DAY_ROWS, SAT_ROW, TEMPLATE_SHEET_ID, editable_ranges, 
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GOOGLE = 11391947  # "Marcus's Google connection" (Sheets)
-GMAIL = 11391672   # "Marcus's Gmail connection"
+GMAIL = 11845900   # "Marcus's Gmail connection (lifting tracker)" – reauthorized 2026-10-21 after Google revoked the old token
 
 
 def sheets_call(mid, url, method="GET", qs=None, body=None, note="", filt=None, x=0):
