@@ -127,7 +127,7 @@ recalculation, and for block D from weeks 1–3). Blank means log what you lift 
 
 | Scenario | Schedule | Does |
 |---|---|---|
-| Lifting – Weekly Tab Generator (Sat 7am) | Saturdays 07:00 ET | If `Config!B16` is TRUE: duplicates `_Template` as `Wk NN · Mon d`, stamps the week number and previous tab, protects the tab except the yellow cells, freezes exercises and suggested weights as values, then advances Config. |
+| Lifting – Weekly Tab Generator (Sat 7am) | Saturdays 07:00 ET | If `Config!B16` is TRUE (it's Saturday or later **and** next week's tab doesn't exist yet, so a re-run never duplicates): duplicates `_Template` as `Wk NN · Mon d`, stamps the week number and previous tab, protects the tab except the yellow cells, freezes exercises and suggested weights as values, then advances Config. |
 | Lifting – Workout Complete Email (every 15 min, 5–11 am) | every 15 min, 05:00–11:00 ET (a day ticked after 11 am is emailed at 5 am the next morning) | Reads `Outbox` (days ticked complete with no "Email sent" stamp), emails each summary to the address in `Config!B8`, then stamps "Email sent". The email also includes the previous day's nutrition totals and the surplus or deficit vs maintenance. The recipient gets only the email, with no access to the sheet. |
 | Lifting – Setup (one-shot) | (deleted after use) | Created the spreadsheet from `build/*.json`; blueprint kept in `make/`. |
 
@@ -178,3 +178,4 @@ The blueprints are in `make/` and are regenerated with `python scripts/build_mak
   Verified on a throwaway test tab: week 4 showed the right exercises, labels, time math and
   start weights; a logged Push 1 gave the right targets, "next week" weights and email HTML
   (6 rows, "5 of 6"); a test week 5 carried 145→150 etc. The test tabs were deleted; no email was sent.
+- 2026-10-26: Wk 04 · Nov 1 was generated early (manual run); Sat Oct 31's run skips, Wk 05 builds Sat Nov 7.

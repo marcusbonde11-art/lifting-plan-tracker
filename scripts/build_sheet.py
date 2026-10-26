@@ -164,8 +164,10 @@ CONFIG = [  # (label, value, note, format) – rows 2..20
     ("Next tab name", '="Wk "&TEXT(B12,"00")&" · "&TEXT(B2+(B12-1)*7,"mmm d")', "", None),
     ("Next sheet ID", "=100000+B12", "", None),
     ("Next week starts", "=B2+(B12-1)*7", "", DATE),
-    ("Generate next week now?", "=OR(B3=0,B15-TODAY()<=1)",
-     "TRUE from Saturday on (or before week 1). The generator does nothing while FALSE.", None),
+    # The tab check makes a re-run (or a run after a manual early build) a no-op, never a duplicate.
+    ("Generate next week now?", '=AND(OR(B3=0,B15-TODAY()<=1),ISERROR(INDIRECT("\'"&B13&"\'!A1")))',
+     "TRUE from Saturday on (or before week 1), and only if next week's tab doesn't exist yet. "
+     "The generator does nothing while FALSE.", None),
     ("Kettlebell warm-up – Push days", KB["push"]["url"], KB["push"]["title"], None),   # row 17
     ("Kettlebell warm-up – Pull days", KB["pull"]["url"], KB["pull"]["title"], None),   # row 18
     ("Kettlebell warm-up – Leg days", KB["legs"]["url"], KB["legs"]["title"], None),    # row 19
